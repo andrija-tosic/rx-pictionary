@@ -47,6 +47,8 @@ export class Game {
                         if (letter !== '_')
                             return letter;
 
+                        return '_';
+
                         if (i % 2 === 0) {
                             return '_';
                         }
@@ -61,6 +63,7 @@ export class Game {
                 case 7:
                     clearInterval(this.timer);
                     this.server.revealWord(this.word);
+                    this.started = false;
                     break;
 
                 default:

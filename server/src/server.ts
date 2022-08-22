@@ -9,6 +9,8 @@ import { Player } from "../../shared/models/player";
 import { ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData } from "../../shared/socket-events";
 import { Game } from "../models/game";
 
+type id = string;
+
 export class AppServer {
     private app: express.Application;
     private server: http.Server;
@@ -19,6 +21,8 @@ export class AppServer {
     private apiUrl: string;
 
     private players = new Map<string, Player>;
+
+    private drawingPlayerSocket: Socket<ClientToServerEvents, ServerToClientEvents>;
 
     private game: Game;
 
@@ -65,7 +69,7 @@ export class AppServer {
     }
 
     public revealWord(word: string): void {
-        this.socket.broadcast.emit('wordReveal', word);
+        this.drawingPlayerSocket.broadcast.emit('wordReveal', word);
     }
 
     private events(): void {
@@ -94,33 +98,47 @@ export class AppServer {
                     return;
                 }
 
+                this.drawingPlayerSocket = socket;
+
                 const words: string[] = await res.json() as string[];
                 const word = words[Math.floor(Math.random() * words.length)];
 
                 this.game = new Game(this, word, socket.id);
 
-                socket.broadcast.emit('start', '_'.repeat(word.length));
+                this.io.sockets.emit('start', '_'.repeat(word.length));
 
-                socket.emit('wordReveal', word); // emitted to player who's drawing
+                socket.emit('wordReveal', word); // emitted only to player who's drawing
 
                 console.log(`Game started with word: ${word}`);
             });
 
-            socket.on('message', (m: Message) => {
-                console.log("[server](message): %s", JSON.stringify(m));
+            socket.on('message', (message: Message) => {
+                console.log("[server](message): %s", JSON.stringify(message));
 
-                if (m.text.trim().toLowerCase().localeCompare(this.game.word) === 0) {
+
+                if (this.game?.started
+                    && socket.id !== this.drawingPlayerSocket.id
+                    && message.text.trim().toLowerCase().localeCompare(this.game?.word) === 0
+                ) {
                     socket.broadcast.emit('message', {
-                        senderId: m.senderId,
-                        senderName: m.senderName,
-                        text: `${m.senderName} has guessed the word!`
+                        senderId: message.senderId,
+                        senderName: message.senderName,
+                        text: `has guessed the word! ✅`
                     });
-                    // add score to player
+
+                    this.io.sockets.emit('correctGuess', socket.id);
+
+                    console.log(`${message.senderName} has guessed the word! ✅`);
+
+                    // TODO: add score to player
+
+                    this.players.get(message.senderId)!.score += 100;
                 }
                 else {
-                    socket.broadcast.emit('message', m);
+                    socket.broadcast.emit('message', message);
                 }
-            });
+            }
+            );
 
             socket.on('image', (imgBase64: string) => {
                 socket.broadcast.emit('image', imgBase64);

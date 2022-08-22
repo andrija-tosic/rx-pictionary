@@ -13,6 +13,7 @@ export interface ServerToClientEvents {
     allPlayers: (players: Player[]) => void;
     start: (word: string) => void;
     wordReveal: (word: string) => void;
+    correctGuess: (id: string) => void;
 
     withAck: (d: string, callback: (e: number) => void) => void;
 }
