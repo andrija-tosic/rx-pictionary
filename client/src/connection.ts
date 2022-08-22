@@ -1,22 +1,30 @@
 import { of, fromEvent, Observable } from "rxjs";
-import { map, mapTo, switchMap } from "rxjs/operators";
+import { map, switchMap, tap } from "rxjs/operators";
 import { io, Socket } from "socket.io-client";
-import { ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData } from '../../shared/socket-events';
+import { ClientToServerEvents, ServerToClientEvents } from '../../shared/socket-events';
 
 export const socket$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>> = of(io("ws://localhost:3000"));
 
-export const connect$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>> = socket$.pipe(
-    switchMap((socket) => fromEvent(socket as any, "connect").pipe(mapTo(socket)))
+export const connection$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>> = socket$.pipe(
+    switchMap((socket) => fromEvent(socket as any, "connect").pipe(map(() => socket)))
 );
 
-export function listenAfterConnected<K, V>(event: keyof ServerToClientEvents): Observable<any> {
-    return connect$.pipe(switchMap((socket) => fromEvent(socket as any, event)));
+export function listenOnSocket
+    <
+        E extends keyof ServerToClientEvents,
+        P = ServerToClientEvents[E] extends [] ? Parameters<ServerToClientEvents[E]> : Parameters<ServerToClientEvents[E]>[0]
+    >
+    (event: E) {
+    return connection$.pipe(switchMap((socket) => fromEvent<P>(socket as Socket, event)));
 }
-export function emitAfterConnected(observable: Observable<any>): Observable<{
+
+export function emitOnSocket<T>(observable: Observable<T>): Observable<{
     socket: Socket<ServerToClientEvents, ClientToServerEvents>,
-    data: any
+    data: T
 }> {
-    return connect$.pipe(
-        switchMap((socket) => observable.pipe(map((data) => ({ socket, data }))))
+    return connection$.pipe(
+        switchMap((socket) => observable.pipe(
+            tap((data) => console.log('connection switchMap', data)),
+            map((data) => ({ socket, data }))))
     );
 }

@@ -1,7 +1,9 @@
+import { Message } from './../../shared/models/message';
 import { Player } from '../../shared/models/player';
-import { map, switchMap, tap, first, filter, } from 'rxjs/operators';
+import { map, switchMap, tap, first, filter, share, shareReplay } from 'rxjs/operators';
 import { Observable, fromEvent, of, combineLatest } from "rxjs";
-import { listenAfterConnected, emitAfterConnected, connect$ } from "./connection";
+import { listenOnSocket, emitOnSocket, connection$ } from "./connection";
+import { send$, start$ } from './actions';
 
 const players = new Map<string, Player>;
 let name$: Observable<string>;
@@ -12,12 +14,25 @@ function printPlayers() {
     console.log(Array.from(players.values()));
 }
 
+function appendMessageToList(message: Message) {
+    const li = document.createElement('li');
+    li.innerHTML = message.senderName + ": " + message.text;
+
+    document.getElementById('message-list')!.appendChild(li);
+    // console.log('appending to ul')
+
+}
+
 if (name) {
-    name$ = of(name);
+    name$ = of(name)
+        .pipe(
+        // tap((name) => console.log(name))
+    );
 }
 else {
     name$ = of(prompt("Enter your name"))
-        .pipe(first(),
+        .pipe(
+            first(),
             filter((name) => !!name),
             switchMap((name) => of(name!.trim()))
         );
@@ -27,58 +42,89 @@ name$.subscribe((name: string) => {
     localStorage.setItem('name', name);
 });
 
-export const thisPlayer$: Observable<Player> = combineLatest([
-    connect$,
-    name$,
-]).pipe(map(([socket, name]) => ({ id: socket?.id, name, score: 0, ready: false })));
+const thisPlayer$: Observable<Player> = combineLatest([connection$, name$])
+    .pipe(
+        map(([socket, name]) => ({ id: socket?.id, name, score: 0 })),
+        // tap(() => console.log('thisPlayer'))
+    );
 
-const readyBtn = document.getElementById('ready-btn')!;
-
-const ready$ = fromEvent(readyBtn, 'click').pipe(
-    tap(() => {
-        readyBtn.style.visibility = 'false';
-
-    }),
+const playerSentMessage$: Observable<Player> = combineLatest([thisPlayer$, send$]
+).pipe(
+    map(data => data[0]),
+    tap(() => console.log('playerSentMessage$'))
 );
 
-combineLatest(
-    thisPlayer$,
-    ready$
-).subscribe(data => {
-    players.get(data[0].id)!.ready = true;
+// thisPlayer$.subscribe((p) => console.log('this player'));
+playerSentMessage$.subscribe((d) => console.log(d));
 
-    printPlayers();
+emitOnSocket(playerSentMessage$).subscribe(({ socket, data }) => {
+
+    console.log('appending message to list');
+    appendMessageToList({
+        senderId: data.id,
+        senderName: data.name,
+        text: (document.getElementById('message-input') as HTMLInputElement).value
+    });
+
+    console.log('emitting message');
+    socket.emit('message', {
+        senderId: data.id,
+        senderName: data.name,
+        text: (document.getElementById('message-input') as HTMLInputElement).value
+    })
 });
 
-emitAfterConnected(name$).subscribe(({ socket, data }) => {
-    socket.emit('newPlayer', data);
+listenOnSocket('message').subscribe((message: Message) => {
+    console.log('received message to list');
+    appendMessageToList({
+        senderId: message.senderId,
+        senderName: message.senderName,
+        text: message.text
+    });
+
+    console.log(JSON.stringify(message));
 });
 
-listenAfterConnected('allPlayers').subscribe((playersList: Player[]) => {
+
+// emitOnSocket(start$).subscribe(({ socket }) => {
+//     socket.emit('start');
+// });
+
+listenOnSocket('start').subscribe((word: string) => {
+    console.log(`Game started: ${word}`);
+});
+
+listenOnSocket('wordReveal').subscribe((word: string) => {
+    console.log(`Revealed word is ${word}`);
+});
+
+// emitOnSocket(name$).subscribe(({ socket, data }) => {
+//     socket.emit('newPlayer', data);
+// });
+
+listenOnSocket('allPlayers').subscribe((playersList: Player[]) => {
 
     players.clear();
 
     playersList.forEach(player => {
-        players.set(player.id, { id: player.id, name: player.name, score: 0, ready: player.ready });
+        players.set(player.id, { id: player.id, name: player.name, score: 0 });
     });
 
     printPlayers();
 });
 
-listenAfterConnected('newPlayer').subscribe((player: Player) => {
+listenOnSocket('newPlayer').subscribe((player: Player) => {
     console.log(`${player.name} joined`);
-    players.set(player.id, { id: player.id, name: player.name, score: 0, ready: false });
+    players.set(player.id, { id: player.id, name: player.name, score: 0 });
     printPlayers();
 });
 
-listenAfterConnected('playerLeft').subscribe((id: string) => {
+listenOnSocket('message').subscribe((message: Message) => {
+    appendMessageToList(message);
+});
+
+listenOnSocket('playerLeft').subscribe((id: string) => {
     console.log(`${id} left`);
     players.delete(id);
-    printPlayers();
-});
-
-listenAfterConnected('playerReady').subscribe((id: string) => {
-    console.log(`${id} is ready`);
-    players.get(id)!.ready = true;
     printPlayers();
 });

@@ -11,6 +11,8 @@ export interface ServerToClientEvents {
     image: (imgBase64: string) => void;
     newPlayer: (player: Player) => void;
     allPlayers: (players: Player[]) => void;
+    start: (word: string) => void;
+    wordReveal: (word: string) => void;
 
     withAck: (d: string, callback: (e: number) => void) => void;
 }
@@ -20,6 +22,7 @@ export interface ClientToServerEvents {
     message: (msg: Message) => void;
     image: (imgBase64: string) => void;
     newPlayer: (name: string) => void;
+    start: () => void;
 }
 
 export interface InterServerEvents {

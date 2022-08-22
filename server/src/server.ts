@@ -2,19 +2,25 @@ import express from "express";
 import cors from "cors";
 import * as http from "http";
 import * as socketIO from "socket.io"
+import fetch from "node-fetch";
 import { Message } from "../../shared/models/message";
 import { Server, Socket } from "socket.io"
 import { Player } from "../../shared/models/player";
 import { ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData } from "../../shared/socket-events";
+import { Game } from "../models/game";
 
 export class AppServer {
-    public static readonly PORT: number = 3000;
     private app: express.Application;
     private server: http.Server;
     private io: Server;
-    private port: string | number;
+    private socket: Socket<ClientToServerEvents, ServerToClientEvents>;
+    private serverPort: string | number;
+    private jsonPort: string | number;
+    private apiUrl: string;
 
     private players = new Map<string, Player>;
+
+    private game: Game;
 
     constructor() {
         this.createApp();
@@ -37,12 +43,14 @@ export class AppServer {
     }
 
     private config(): void {
-        this.port = process.env.PORT || AppServer.PORT;
+        require("dotenv").config();
+
+        this.serverPort = process.env.PORT!;
+        this.jsonPort = process.env.JSON_PORT!;
+        this.apiUrl = process.env.API_URL!;
     }
 
     private sockets(): void {
-        // const Server = require("socket.io")(this.server);
-
         this.io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(this.server, {
             cors: {
                 origin: '*'
@@ -51,9 +59,13 @@ export class AppServer {
     }
 
     private listen(): void {
-        this.server.listen(this.port, () => {
-            console.log("Running http server on port %s", this.port);
+        this.server.listen(this.serverPort, () => {
+            console.log("Running http server on port %s", this.serverPort);
         });
+    }
+
+    public revealWord(word: string): void {
+        this.socket.broadcast.emit('wordReveal', word);
     }
 
     private events(): void {
@@ -62,24 +74,52 @@ export class AppServer {
         });
 
         this.io.on('connect', (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
-            console.log(`${socket.id} connected`);
+            // console.log(`${socket.id} connected`);
+            this.socket = socket;
 
             socket.broadcast.emit('allPlayers', Array.from(this.players.values()).filter(player => player.id !== socket.id));
 
             socket.on('newPlayer', (name) => {
                 console.log(`Player ${socket.id}: ${name} connected`);
 
-                this.players.set(socket.id, { id: socket.id, name: name, score: 0, ready: false });
-                socket.broadcast.emit('newPlayer', { id: socket.id, name: name, score: 0, ready: false });
+                this.players.set(socket.id, { id: socket.id, name: name, score: 0 });
+                socket.broadcast.emit('newPlayer', { id: socket.id, name: name, score: 0 });
             });
 
-            socket.on('playerReady', () => {
-                this.players.get(socket.id)!.ready = true;
+            socket.on('start', async () => {
+
+                const res = await fetch(`${this.apiUrl}/words`);
+
+                if (!res.ok) {
+                    return;
+                }
+
+                const words: string[] = await res.json() as string[];
+                const word = words[Math.floor(Math.random() * words.length)];
+
+                this.game = new Game(this, word, socket.id);
+
+                socket.broadcast.emit('start', '_'.repeat(word.length));
+
+                socket.emit('wordReveal', word); // emitted to player who's drawing
+
+                console.log(`Game started with word: ${word}`);
             });
 
             socket.on('message', (m: Message) => {
                 console.log("[server](message): %s", JSON.stringify(m));
-                socket.broadcast.emit('message', m);
+
+                if (m.text.trim().toLowerCase().localeCompare(this.game.word) === 0) {
+                    socket.broadcast.emit('message', {
+                        senderId: m.senderId,
+                        senderName: m.senderName,
+                        text: `${m.senderName} has guessed the word!`
+                    });
+                    // add score to player
+                }
+                else {
+                    socket.broadcast.emit('message', m);
+                }
             });
 
             socket.on('image', (imgBase64: string) => {
