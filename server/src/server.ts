@@ -1,4 +1,5 @@
-import { players } from './../../client/src/index';
+import { SocketParameterType } from './../../client/src/socket';
+import { EVENTS } from './../../shared/socket-events';
 import express from "express";
 import cors from "cors";
 import * as http from "http";
@@ -55,11 +56,17 @@ export class AppServer {
     }
 
     private sockets(): void {
-        this.io = new Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>(this.server, {
-            cors: {
-                origin: '*'
-            },
-        });
+        this.io = new Server
+            <ClientToServerEvents,
+                ServerToClientEvents,
+                InterServerEvents,
+                SocketData<SocketParameterType>
+            >
+            (this.server, {
+                cors: {
+                    origin: '*'
+                },
+            });
     }
 
     private listen(): void {
@@ -69,26 +76,25 @@ export class AppServer {
     }
 
     public revealWord(word: string): void {
-        this.drawingPlayerSocket.broadcast.emit('wordReveal', word);
+        this.drawingPlayerSocket.broadcast.emit(EVENTS.WORD_REVEAL, word);
     }
 
     public emitTime(seconds: number): void {
-        this.io.sockets.emit('time', seconds);
+        this.io.sockets.emit(EVENTS.TIME, seconds);
     }
 
     private events(): void {
-        this.io.on('error', (err: Error) => {
+        this.io.on(EVENTS.ERROR, (err: Error) => {
             console.log(`connect_error due to ${err.message}`);
         });
 
-        this.io.on('connect', (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
+        this.io.on(EVENTS.CONNECT, (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
             // console.log(`${socket.id} connected`);
             this.socket = socket;
 
-            this.io.sockets.emit('allPlayers', Array.from(this.players.values()))
-            // .filter(player => player.id !== socket.id));
+            this.io.sockets.emit(EVENTS.ALL_PLAYERS, Array.from(this.players.values()))
 
-            socket.on('newPlayer', async (name) => {
+            socket.on(EVENTS.NEW_PLAYER, async (name) => {
                 console.log(`Player ${socket.id}: ${name} connected`);
 
                 const res = await fetch(`${this.api}/players?name=${name}`);
@@ -116,10 +122,10 @@ export class AppServer {
                 }
 
                 this.players.set(socket.id, playerToEmit)
-                this.io.sockets.emit('newPlayer', playerToEmit);
+                this.io.sockets.emit(EVENTS.NEW_PLAYER, playerToEmit);
 
                 if (this.game) {
-                    socket.emit('gameState', {
+                    socket.emit(EVENTS.GAME_STATE, {
                         started: this.game.started,
                         drawingPlayerId: this.game.drawingPlayerId,
                         revealedWord: this.game.revealedWord,
@@ -129,7 +135,7 @@ export class AppServer {
 
             });
 
-            socket.on('start', async () => {
+            socket.on(EVENTS.START, async () => {
 
                 const res = await fetch(`${this.api}/words`);
 
@@ -145,31 +151,28 @@ export class AppServer {
 
                 this.game = new Game(this, word, socket.id);
 
-                this.io.sockets.emit('start', '_'.repeat(word.length));
+                this.io.sockets.emit(EVENTS.START, '_'.repeat(word.length));
 
-                socket.emit('wordReveal', word); // emitted only to player who's drawing
+                socket.emit(EVENTS.WORD_REVEAL, word); // emitted only to player who's drawing
 
                 console.log(`Game started with word: ${word}`);
             });
 
-            socket.on('message', async (message: Message) => {
+            socket.on(EVENTS.MESSAGE, async (message: Message) => {
                 console.log("[server](message): %s", JSON.stringify(message));
-
-                console.log(this.game?.started, socket.id !== this.drawingPlayerSocket.id,
-                    message.text.trim().toLowerCase().localeCompare(this.game?.word) === 0)
 
                 if (this.game?.started
                     && socket.id !== this.drawingPlayerSocket.id
                     && message.text.trim().toLowerCase().localeCompare(this.game?.word) === 0
                 ) {
-                    socket.broadcast.emit('message', {
+                    socket.broadcast.emit(EVENTS.MESSAGE, {
                         senderId: message.senderId,
                         senderName: message.senderName,
                         text: `has guessed the word! ✅`
                     });
 
-                    this.io.sockets.emit('correctGuess', socket.id);
-                    socket.emit('correctWord', this.game.word);
+                    this.io.sockets.emit(EVENTS.CORRECT_GUESS, socket.id);
+                    socket.emit(EVENTS.CORRECT_WORD, this.game.word);
 
                     console.log(`${message.senderName} has guessed the word! ✅`);
 
@@ -192,31 +195,29 @@ export class AppServer {
                     player.score += scoreToAdd;
                 }
                 else {
-                    socket.broadcast.emit('message', message);
+                    socket.broadcast.emit(EVENTS.MESSAGE, message);
                 }
             }
             );
 
-            socket.on('image', (imgBase64: string) => {
-                socket.broadcast.emit('image', imgBase64);
+            socket.on(EVENTS.IMAGE, (imgBase64: string) => {
+                socket.broadcast.emit(EVENTS.IMAGE, imgBase64);
             })
 
-            socket.on('clearCanvas', () => {
-                socket.broadcast.emit('clearCanvas');
+            socket.on(EVENTS.CLEAR_CANVAS, () => {
+                socket.broadcast.emit(EVENTS.CLEAR_CANVAS);
             })
 
-            socket.on('disconnect', () => {
+            socket.on(EVENTS.DISCONNECT, () => {
                 console.log(`Player ${socket.id}: ${this.players.get(socket.id)?.name} disconnected`);
                 this.players.delete(socket.id);
                 if (this.game?.started && socket.id === this.game.drawingPlayerId) {
                     this.game.stop();
-                    // TODO: broadcast that game is reset
-                    socket.broadcast.emit('stop');
+                    socket.broadcast.emit(EVENTS.STOP);
                 }
-                socket.broadcast.emit('playerLeft', socket.id);
+                socket.broadcast.emit(EVENTS.PLAYER_LEFT, socket.id);
             });
         });
-
     }
 
     public getApp(): express.Application {

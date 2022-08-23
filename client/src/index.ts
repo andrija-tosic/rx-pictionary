@@ -5,10 +5,9 @@ import { start$, startBtn } from './actions';
 import { canvas, ctx, canvasChange$, clearCanvasBtn, clearCanvas, canvasClear$ } from './canvas';
 import { appendMessageToList, renderPlayersList } from './render';
 import { name$, playerSentMessage$ } from './player';
+import { EVENTS } from '../../shared/socket-events';
 
 export const players = new Map<string, Player>;
-
-let seconds: number = 30;
 
 const wordSpan = document.getElementById('word')!;
 const timeSpan = document.getElementById('time')!;
@@ -32,7 +31,7 @@ emitOnSocket(playerSentMessage$).subscribe(({ socket, data }) => {
     });
 
     console.log('emitting message');
-    socket.emit('message', {
+    socket.emit(EVENTS.MESSAGE, {
         senderId: data.id,
         senderName: data.name,
         text: (document.getElementById('message-input') as HTMLInputElement).value
@@ -41,7 +40,7 @@ emitOnSocket(playerSentMessage$).subscribe(({ socket, data }) => {
     (document.getElementById('message-input') as HTMLInputElement).value = '';
 });
 
-listenOnSocket('message').subscribe((message: Message) => {
+listenOnSocket(EVENTS.MESSAGE).subscribe((message: Message) => {
     console.log('received message to list');
     appendMessageToList({
         senderId: message.senderId,
@@ -61,10 +60,10 @@ emitOnSocket(start$).subscribe(({ socket }) => {
     messageInputDiv.style.display = 'none';
     timeHeader.style.display = 'block';
 
-    socket.emit('start');
+    socket.emit(EVENTS.START);
 });
 
-listenOnSocket('stop').subscribe(() => {
+listenOnSocket(EVENTS.STOP).subscribe(() => {
     clearCanvas();
     clearCanvasBtn.style.display = 'none';
     messageInputDiv.style.display = 'block';
@@ -74,7 +73,7 @@ listenOnSocket('stop').subscribe(() => {
 
 })
 
-listenOnSocket('start').subscribe((word: string) => {
+listenOnSocket(EVENTS.START).subscribe((word: string) => {
     console.log(`Game started: ${word}`);
 
     startBtn.style.display = 'none';
@@ -85,7 +84,7 @@ listenOnSocket('start').subscribe((word: string) => {
     wordSpan.innerHTML = word.split('').map(letter => letter === '_' ? ' _ ' : letter).join('');
 });
 
-listenOnSocket('time').subscribe((seconds: number) => {
+listenOnSocket(EVENTS.TIME).subscribe((seconds: number) => {
     timeSpan.innerHTML = seconds.toString();
 
     seconds--;
@@ -99,17 +98,17 @@ listenOnSocket('time').subscribe((seconds: number) => {
 
 })
 
-listenOnSocket('wordReveal').subscribe((word: string) => {
+listenOnSocket(EVENTS.WORD_REVEAL).subscribe((word: string) => {
     console.log(`Revealed word is ${word}`);
 
     wordSpan.innerHTML = word.split('').map(letter => letter === '_' ? ' _ ' : letter).join('');
 });
 
 emitOnSocket(name$).subscribe(({ socket, data }) => {
-    socket.emit('newPlayer', data);
+    socket.emit(EVENTS.NEW_PLAYER, data);
 });
 
-listenOnSocket('allPlayers').subscribe((playersList: Player[]) => {
+listenOnSocket(EVENTS.ALL_PLAYERS).subscribe((playersList: Player[]) => {
 
     players.clear();
     playersList.forEach(player => {
@@ -121,7 +120,7 @@ listenOnSocket('allPlayers').subscribe((playersList: Player[]) => {
 });
 
 
-listenOnSocket('newPlayer').subscribe((player: Player) => {
+listenOnSocket(EVENTS.NEW_PLAYER).subscribe((player: Player) => {
     console.log(`${player.name} joined`);
 
     appendMessageToList({
@@ -135,7 +134,7 @@ listenOnSocket('newPlayer').subscribe((player: Player) => {
     printPlayers();
 });
 
-listenOnSocket('playerLeft').subscribe((id: string) => {
+listenOnSocket(EVENTS.PLAYER_LEFT).subscribe((id: string) => {
     console.log(`${id} left`);
     players.delete(id);
     renderPlayersList();
@@ -144,14 +143,14 @@ listenOnSocket('playerLeft').subscribe((id: string) => {
 
 emitOnSocket(canvasClear$).subscribe(({ socket }) => {
     clearCanvas();
-    socket.emit('clearCanvas');
+    socket.emit(EVENTS.CLEAR_CANVAS);
 });
 
-listenOnSocket('clearCanvas').subscribe(() => {
+listenOnSocket(EVENTS.CLEAR_CANVAS).subscribe(() => {
     clearCanvas();
 });
 
-listenOnSocket('gameState').subscribe((gameState) => {
+listenOnSocket(EVENTS.GAME_STATE).subscribe((gameState) => {
     if (gameState.started) {
         console.log(gameState);
         startBtn.style.display = 'none';
@@ -163,7 +162,7 @@ listenOnSocket('gameState').subscribe((gameState) => {
 emitOnSocket(canvasChange$).subscribe(({ socket }) => {
     // if (thisPlayerDrawing) {
     const base64ImageData = canvas.toDataURL("image/png");
-    socket.emit('image', base64ImageData);
+    socket.emit(EVENTS.IMAGE, base64ImageData);
     // }
 });
 

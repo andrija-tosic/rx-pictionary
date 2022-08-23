@@ -9,10 +9,17 @@ export const connection$: Observable<Socket<ServerToClientEvents, ClientToServer
     switchMap((socket) => fromEvent(socket as any, "connect").pipe(map(() => socket)))
 );
 
+export type SocketParameterType = ServerToClientEvents[keyof ServerToClientEvents] extends []
+    ? Parameters<ServerToClientEvents[keyof ServerToClientEvents]>
+    : Parameters<ServerToClientEvents[keyof ServerToClientEvents]>[0]
+
 export function listenOnSocket
     <
         E extends keyof ServerToClientEvents,
-        P = ServerToClientEvents[E] extends [] ? Parameters<ServerToClientEvents[E]> : Parameters<ServerToClientEvents[E]>[0]
+
+        P = ServerToClientEvents[E] extends []
+        ? Parameters<ServerToClientEvents[E]>
+        : Parameters<ServerToClientEvents[E]>[0]
     >
     (event: E) {
     return connection$.pipe(switchMap((socket) => fromEvent<P>(socket as Socket, event)));

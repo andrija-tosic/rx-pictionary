@@ -2,6 +2,25 @@ import { Player } from './models/player';
 import { Message } from './models/message';
 import { seconds, GameState } from '../server/models/game';
 
+export enum EVENTS {
+    CONNECT = 'connect',
+    DISCONNECT = 'disconnect',
+    ERROR = 'error',
+    PLAYER_LEFT = 'playerLeft',
+    MESSAGE = 'message',
+    IMAGE = 'image',
+    NEW_PLAYER = 'newPlayer',
+    ALL_PLAYERS = 'allPlayers',
+    START = 'start',
+    WORD_REVEAL = 'wordReveal',
+    CORRECT_GUESS = 'correctGuess',
+    CORRECT_WORD = 'correctWord',
+    TIME = 'time',
+    CLEAR_CANVAS = 'clearCanvas',
+    GAME_STATE = 'gameState',
+    STOP = 'stop',
+}
+
 export interface ServerToClientEvents {
     connect: () => void;
     disconnect: () => void;
@@ -24,7 +43,6 @@ export interface ServerToClientEvents {
 }
 
 export interface ClientToServerEvents {
-    playerReady: () => void;
     message: (msg: Message) => void;
     image: (imgBase64: string) => void;
     newPlayer: (name: string) => void;
@@ -35,6 +53,6 @@ export interface ClientToServerEvents {
 export interface InterServerEvents {
 }
 
-export interface SocketData {
-    data: any;
+export interface SocketData<T> {
+    data: T;
 }

@@ -17,14 +17,14 @@ const sendBtnPress$ = fromEvent(sendBtn, 'click').pipe(
     })
 );
 
-const enterKeyPress$ = fromEvent(
-    messageInput,
-    'keypress'
-).pipe(filter((e: any) => e.keyCode === 13 || e.which === 13));
+const enterKeyPress$ = fromEvent(messageInput, 'keypress')
+    .pipe(
+        filter((e) => (e as KeyboardEvent).key === "Enter")
+    );
 
 export const send$ = merge(
     sendBtnPress$,
     enterKeyPress$
 ).pipe(
-    filter((text: string) => !!text),
+    filter(() => !!messageInput.value),
 )
