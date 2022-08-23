@@ -24,7 +24,7 @@ export function emitOnSocket<T>(observable: Observable<T>): Observable<{
 }> {
     return connection$.pipe(
         switchMap((socket) => observable.pipe(
-            tap((data) => console.log('connection switchMap', data)),
+            // tap((data) => console.log('connection switchMap', data)),
             map((data) => ({ socket, data }))))
     );
 }

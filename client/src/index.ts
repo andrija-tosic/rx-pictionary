@@ -1,68 +1,26 @@
 import { Message } from './../../shared/models/message';
 import { Player } from '../../shared/models/player';
-import { map, takeUntil, pairwise, switchMap, tap, first, filter, share, shareReplay } from 'rxjs/operators';
+import { map, takeUntil, pairwise, switchMap, tap, first, filter, share, shareReplay, debounceTime } from 'rxjs/operators';
 import { Observable, fromEvent, of, combineLatest, merge, interval } from "rxjs";
-import { listenOnSocket, emitOnSocket, connection$ } from "./connection";
+import { listenOnSocket, emitOnSocket, connection$ } from "./socket";
 import { send$, start$, startBtn } from './actions';
-import { drawMouseUp$, drawMouseDown$, canvas, drawMouseMove$, drawMouseLeave$, drawOnCanvas, ctx, canvasClear$ } from './canvas';
+import { drawMouseUp$, drawMouseDown$, canvas, drawMouseMove$, drawMouseLeave$, drawOnCanvas, ctx, canvasClear$, canvasChange$, clearCanvasBtn } from './canvas';
+import { appendMessageToList, renderPlayersList } from './render';
+import { name$, playerSentMessage$ } from './player';
 
-const players = new Map<string, Player>;
-let name$: Observable<string>;
+export const players = new Map<string, Player>;
 
 let seconds: number = 30;
 
-const name = localStorage.getItem('name');
 const wordSpan = document.getElementById('word')!;
 const timeSpan = document.getElementById('time')!;
+const currentWordHeader = document.getElementById('current-word-header')!;
 
+export let thisPlayerDrawing = false;
 
 function printPlayers() {
     console.log(Array.from(players.values()));
 }
-
-function appendMessageToList(message: Message) {
-    const li = document.createElement('li');
-    li.innerHTML = message.senderName + ": " + message.text;
-
-    document.getElementById('message-list')!.appendChild(li);
-    // console.log('appending to ul')
-
-}
-
-if (name) {
-    name$ = of(name)
-        .pipe(
-        // tap((name) => console.log(name))
-    );
-}
-else {
-    name$ = of(prompt("Enter your name"))
-        .pipe(
-            first(),
-            filter((name) => !!name),
-            switchMap((name) => of(name!.trim()))
-        );
-}
-
-name$.subscribe((name: string) => {
-    localStorage.setItem('name', name);
-});
-
-const thisPlayer$: Observable<Player> = combineLatest([connection$, name$])
-    .pipe(
-        map(([socket, name]) => ({ id: socket?.id, name, score: 0 })),
-        tap(() => console.log('thisPlayer'))
-    );
-
-const playerSentMessage$: Observable<Player> = combineLatest([thisPlayer$, send$]
-).pipe(
-    map(data => data[0]),
-    tap(() => console.log('playerSent')),
-    share()
-);
-
-// thisPlayer$.subscribe();
-playerSentMessage$.subscribe();
 
 emitOnSocket(playerSentMessage$).subscribe(({ socket, data }) => {
 
@@ -96,6 +54,9 @@ listenOnSocket('message').subscribe((message: Message) => {
 
 
 emitOnSocket(start$).subscribe(({ socket }) => {
+    thisPlayerDrawing = true;
+    clearCanvasBtn.style.display = 'block';
+
     socket.emit('start');
 });
 
@@ -104,17 +65,20 @@ listenOnSocket('start').subscribe((word: string) => {
 
     startBtn.style.display = 'none';
 
-    wordSpan.innerHTML = word;
+    wordSpan.innerHTML = word.split('').map(letter => letter === '_' ? ' _ ' : letter).join('');
 
+    seconds = 30;
 
     const interval = setInterval(() => {
         timeSpan.innerHTML = seconds.toString();
 
         seconds--;
 
-        if (seconds === 0)
+        if (seconds === 0) {
+            timeSpan.innerHTML = 'expired';
             clearInterval(interval);
-
+            startBtn.style.display = 'block';
+        }
     }, 1000);
 
 });
@@ -122,7 +86,7 @@ listenOnSocket('start').subscribe((word: string) => {
 listenOnSocket('wordReveal').subscribe((word: string) => {
     console.log(`Revealed word is ${word}`);
 
-    wordSpan.innerHTML = word;
+    wordSpan.innerHTML = word.split('').map(letter => letter === '_' ? ' _ ' : letter).join('');
 });
 
 emitOnSocket(name$).subscribe(({ socket, data }) => {
@@ -132,74 +96,29 @@ emitOnSocket(name$).subscribe(({ socket, data }) => {
 listenOnSocket('allPlayers').subscribe((playersList: Player[]) => {
 
     players.clear();
-
     playersList.forEach(player => {
         players.set(player.id, { id: player.id, name: player.name, score: 0 });
     });
 
+    renderPlayersList();
     printPlayers();
 });
+
 
 listenOnSocket('newPlayer').subscribe((player: Player) => {
     console.log(`${player.name} joined`);
     players.set(player.id, { id: player.id, name: player.name, score: 0 });
+    renderPlayersList();
     printPlayers();
 });
 
 listenOnSocket('playerLeft').subscribe((id: string) => {
     console.log(`${id} left`);
     players.delete(id);
+    renderPlayersList();
     printPlayers();
 });
 
-const novi = drawMouseDown$
-    .pipe(
-        switchMap((e) => {
-            return drawMouseMove$
-                .pipe(
-                    takeUntil(drawMouseUp$),
-                    takeUntil(drawMouseLeave$),
-                    pairwise()
-                )
-        }),
-        map((res) => {
-            const rect = canvas.getBoundingClientRect();
-            const prevMouseEvent = res[0] as MouseEvent;
-            const currMouseEvent = res[1] as MouseEvent;
-
-            const prevPos = {
-                x: prevMouseEvent.clientX - rect.left,
-                y: prevMouseEvent.clientY - rect.top
-            };
-
-            const currentPos = {
-                x: currMouseEvent.clientX - rect.left,
-                y: currMouseEvent.clientY - rect.top
-            };
-
-            return { prevPos, currentPos };
-        }),
-        tap((data) => {
-            drawOnCanvas((data as LineCoordinates).prevPos, (data as LineCoordinates).currentPos);
-
-        })
-    )
-
-type LineCoordinates = {
-    prevPos: {
-        x: number;
-        y: number;
-    };
-    currentPos: {
-        x: number;
-        y: number;
-    };
-}
-
-const canvasChange$ = merge(
-    novi,
-    canvasClear$
-);
 
 emitOnSocket(canvasChange$).subscribe(({ socket, data }) => {
     const base64ImageData = canvas.toDataURL("image/png");
@@ -227,4 +146,10 @@ listenOnSocket('correctGuess').subscribe((id: string) => {
         name: player.name,
         score: player.score + 100
     });
-})
+
+    renderPlayersList();
+});
+
+listenOnSocket('correctWord').subscribe((word: string) => {
+    currentWordHeader.innerHTML = 'You guessed correctly! The word is ' + word + '. ✅';
+});

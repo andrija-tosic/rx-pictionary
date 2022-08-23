@@ -14,6 +14,7 @@ export interface ServerToClientEvents {
     start: (word: string) => void;
     wordReveal: (word: string) => void;
     correctGuess: (id: string) => void;
+    correctWord: (word: string) => void;
 
     withAck: (d: string, callback: (e: number) => void) => void;
 }

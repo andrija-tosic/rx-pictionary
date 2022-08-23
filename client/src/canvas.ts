@@ -1,5 +1,7 @@
+import { thisPlayerDrawing } from './index';
+import { map, switchMap, takeUntil, pairwise } from 'rxjs/operators';
 import { tap } from 'rxjs/operators';
-import { fromEvent } from "rxjs";
+import { fromEvent, merge } from "rxjs";
 
 export const canvas: HTMLCanvasElement = document.getElementById('board')! as HTMLCanvasElement;
 export const drawMouseUp$ = fromEvent<MouseEvent>(canvas, 'mouseup');
@@ -21,9 +23,8 @@ fromEvent(colorPickerInput, 'change')
         }))
     .subscribe();
 
-const cRect = canvas.getBoundingClientRect()
-
-const clearCanvasBtn = document.getElementById('clear-canvas-btn')!;
+export const clearCanvasBtn = document.getElementById('clear-canvas-btn')!;
+clearCanvasBtn.style.display = 'none';
 
 export const canvasClear$ = fromEvent(clearCanvasBtn, 'click')
     .pipe(
@@ -48,3 +49,42 @@ export function drawOnCanvas(
         ctx.stroke();
     }
 }
+
+const canvasDrawing$ = drawMouseDown$
+    .pipe(
+        switchMap((e) => {
+            return drawMouseMove$
+                .pipe(
+                    takeUntil(drawMouseUp$),
+                    takeUntil(drawMouseLeave$),
+                    pairwise(),
+                )
+        }),
+        map((res) => {
+            const rect = canvas.getBoundingClientRect();
+            const prevMouseEvent = res[0] as MouseEvent;
+            const currMouseEvent = res[1] as MouseEvent;
+
+            const prevPos = {
+                x: prevMouseEvent.clientX - rect.left,
+                y: prevMouseEvent.clientY - rect.top
+            };
+
+            const currentPos = {
+                x: currMouseEvent.clientX - rect.left,
+                y: currMouseEvent.clientY - rect.top
+            };
+
+            return { prevPos, currentPos };
+        }),
+        tap(({ prevPos, currentPos }) => {
+            if (thisPlayerDrawing)
+                drawOnCanvas(prevPos, currentPos);
+
+        })
+    );
+
+export const canvasChange$ = merge(
+    canvasDrawing$,
+    canvasClear$
+);

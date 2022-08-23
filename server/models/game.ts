@@ -29,7 +29,7 @@ export class Game {
             this.timePassed++;
 
             switch (this.timePassed) {
-                case 1:
+                case 10:
                     this.revealedWord = this.word.split('').map((letter, i) => {
                         if (i % 3 !== 0) {
                             return '_';
@@ -42,7 +42,7 @@ export class Game {
 
                     break;
 
-                case 4:
+                case 20:
                     this.revealedWord = this.word.split('').map((letter, i) => {
                         if (letter !== '_')
                             return letter;
@@ -60,7 +60,7 @@ export class Game {
 
                     break;
 
-                case 7:
+                case 30:
                     clearInterval(this.timer);
                     this.server.revealWord(this.word);
                     this.started = false;

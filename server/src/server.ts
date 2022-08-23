@@ -1,3 +1,5 @@
+import { map, switchMap } from 'rxjs/operators';
+import { fromEvent, Observable, of } from 'rxjs';
 import express from "express";
 import cors from "cors";
 import * as http from "http";
@@ -8,6 +10,8 @@ import { Server, Socket } from "socket.io"
 import { Player } from "../../shared/models/player";
 import { ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData } from "../../shared/socket-events";
 import { Game } from "../models/game";
+import { listenOnSocket } from '../../client/src/socket';
+import socketIo from 'socket.io-client';
 
 type id = string;
 
@@ -77,17 +81,38 @@ export class AppServer {
             console.log(`connect_error due to ${err.message}`);
         });
 
+        const socket$: Observable<Server> = of(
+            this.io
+        );
+
+        const connection$: Observable<Server> = socket$.pipe(
+            switchMap((socket) => fromEvent(socket as any, "connect").pipe(map(() => socket)))
+        );
+
+        function listenOnSocket
+            <
+                E extends keyof ServerToClientEvents,
+                P = ServerToClientEvents[E] extends [] ? Parameters<ServerToClientEvents[E]> : Parameters<ServerToClientEvents[E]>[0]
+            >
+            (event: E) {
+            return connection$.pipe(switchMap((socket) => fromEvent<P>(socket, event)));
+
+        }
+
+        listenOnSocket('image').subscribe(() => console.log('imagebbrr'));
+
         this.io.on('connect', (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
             // console.log(`${socket.id} connected`);
             this.socket = socket;
 
-            socket.broadcast.emit('allPlayers', Array.from(this.players.values()).filter(player => player.id !== socket.id));
+            this.io.sockets.emit('allPlayers', Array.from(this.players.values()))
+            // .filter(player => player.id !== socket.id));
 
             socket.on('newPlayer', (name) => {
                 console.log(`Player ${socket.id}: ${name} connected`);
 
                 this.players.set(socket.id, { id: socket.id, name: name, score: 0 });
-                socket.broadcast.emit('newPlayer', { id: socket.id, name: name, score: 0 });
+                this.io.sockets.emit('newPlayer', { id: socket.id, name: name, score: 0 });
             });
 
             socket.on('start', async () => {
@@ -115,6 +140,8 @@ export class AppServer {
             socket.on('message', (message: Message) => {
                 console.log("[server](message): %s", JSON.stringify(message));
 
+                console.log(this.game?.started, socket.id !== this.drawingPlayerSocket.id,
+                    message.text.trim().toLowerCase().localeCompare(this.game?.word) === 0)
 
                 if (this.game?.started
                     && socket.id !== this.drawingPlayerSocket.id
@@ -127,6 +154,7 @@ export class AppServer {
                     });
 
                     this.io.sockets.emit('correctGuess', socket.id);
+                    socket.emit('correctWord', this.game.word);
 
                     console.log(`${message.senderName} has guessed the word! ✅`);
 
