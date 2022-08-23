@@ -1,10 +1,8 @@
 import { Message } from './../../shared/models/message';
 import { Player } from '../../shared/models/player';
-import { map, takeUntil, pairwise, switchMap, tap, first, filter, share, shareReplay, debounceTime } from 'rxjs/operators';
-import { Observable, fromEvent, of, combineLatest, merge, interval } from "rxjs";
-import { listenOnSocket, emitOnSocket, connection$ } from "./socket";
-import { send$, start$, startBtn } from './actions';
-import { drawMouseUp$, drawMouseDown$, canvas, drawMouseMove$, drawMouseLeave$, drawOnCanvas, ctx, canvasClear$, canvasChange$, clearCanvasBtn } from './canvas';
+import { listenOnSocket, emitOnSocket } from "./socket";
+import { start$, startBtn } from './actions';
+import { canvas, ctx, canvasChange$, clearCanvasBtn, clearCanvas, canvasClear$ } from './canvas';
 import { appendMessageToList, renderPlayersList } from './render';
 import { name$, playerSentMessage$ } from './player';
 
@@ -15,6 +13,8 @@ let seconds: number = 30;
 const wordSpan = document.getElementById('word')!;
 const timeSpan = document.getElementById('time')!;
 const currentWordHeader = document.getElementById('current-word-header')!;
+const messageInputDiv = document.getElementById('message-input-div')!;
+const timeHeader = document.getElementById('time-header')!;
 
 export let thisPlayerDrawing = false;
 
@@ -54,34 +54,50 @@ listenOnSocket('message').subscribe((message: Message) => {
 
 
 emitOnSocket(start$).subscribe(({ socket }) => {
+    timeSpan.innerHTML = '30';
     thisPlayerDrawing = true;
+    clearCanvas();
     clearCanvasBtn.style.display = 'block';
+    messageInputDiv.style.display = 'none';
+    timeHeader.style.display = 'block';
 
     socket.emit('start');
 });
+
+listenOnSocket('stop').subscribe(() => {
+    clearCanvas();
+    clearCanvasBtn.style.display = 'none';
+    messageInputDiv.style.display = 'block';
+    currentWordHeader.innerHTML = '';
+    timeHeader.style.display = 'none';
+    startBtn.style.display = 'block';
+
+})
 
 listenOnSocket('start').subscribe((word: string) => {
     console.log(`Game started: ${word}`);
 
     startBtn.style.display = 'none';
+    timeHeader.style.display = 'block';
+
+    clearCanvas();
 
     wordSpan.innerHTML = word.split('').map(letter => letter === '_' ? ' _ ' : letter).join('');
-
-    seconds = 30;
-
-    const interval = setInterval(() => {
-        timeSpan.innerHTML = seconds.toString();
-
-        seconds--;
-
-        if (seconds === 0) {
-            timeSpan.innerHTML = 'expired';
-            clearInterval(interval);
-            startBtn.style.display = 'block';
-        }
-    }, 1000);
-
 });
+
+listenOnSocket('time').subscribe((seconds: number) => {
+    timeSpan.innerHTML = seconds.toString();
+
+    seconds--;
+
+    if (seconds === 0) {
+        timeSpan.innerHTML = 'expired';
+        startBtn.style.display = 'block';
+        messageInputDiv.style.display = 'block';
+
+    }
+
+})
 
 listenOnSocket('wordReveal').subscribe((word: string) => {
     console.log(`Revealed word is ${word}`);
@@ -97,7 +113,7 @@ listenOnSocket('allPlayers').subscribe((playersList: Player[]) => {
 
     players.clear();
     playersList.forEach(player => {
-        players.set(player.id, { id: player.id, name: player.name, score: 0 });
+        players.set(player.id, { id: player.id, name: player.name, score: player.score });
     });
 
     renderPlayersList();
@@ -107,7 +123,14 @@ listenOnSocket('allPlayers').subscribe((playersList: Player[]) => {
 
 listenOnSocket('newPlayer').subscribe((player: Player) => {
     console.log(`${player.name} joined`);
-    players.set(player.id, { id: player.id, name: player.name, score: 0 });
+
+    appendMessageToList({
+        senderId: '',
+        senderName: 'info',
+        text: `${player.name} joined`
+    });
+
+    players.set(player.id, { id: player.id, name: player.name, score: player.score });
     renderPlayersList();
     printPlayers();
 });
@@ -119,10 +142,29 @@ listenOnSocket('playerLeft').subscribe((id: string) => {
     printPlayers();
 });
 
+emitOnSocket(canvasClear$).subscribe(({ socket }) => {
+    clearCanvas();
+    socket.emit('clearCanvas');
+});
 
-emitOnSocket(canvasChange$).subscribe(({ socket, data }) => {
+listenOnSocket('clearCanvas').subscribe(() => {
+    clearCanvas();
+});
+
+listenOnSocket('gameState').subscribe((gameState) => {
+    if (gameState.started) {
+        console.log(gameState);
+        startBtn.style.display = 'none';
+        timeSpan.innerHTML = (30 - gameState.timePassed).toString();
+        wordSpan.innerHTML = gameState.revealedWord.split('').map(letter => letter === '_' ? ' _ ' : letter).join('');
+    }
+})
+
+emitOnSocket(canvasChange$).subscribe(({ socket }) => {
+    // if (thisPlayerDrawing) {
     const base64ImageData = canvas.toDataURL("image/png");
     socket.emit('image', base64ImageData);
+    // }
 });
 
 listenOnSocket('image').subscribe((base64ImageData: string) => {

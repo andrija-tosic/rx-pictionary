@@ -1,5 +1,5 @@
 import { thisPlayerDrawing } from './index';
-import { map, switchMap, takeUntil, pairwise } from 'rxjs/operators';
+import { map, switchMap, takeUntil, pairwise, filter } from 'rxjs/operators';
 import { tap } from 'rxjs/operators';
 import { fromEvent, merge } from "rxjs";
 
@@ -26,12 +26,11 @@ fromEvent(colorPickerInput, 'change')
 export const clearCanvasBtn = document.getElementById('clear-canvas-btn')!;
 clearCanvasBtn.style.display = 'none';
 
-export const canvasClear$ = fromEvent(clearCanvasBtn, 'click')
-    .pipe(
-        tap(() => ctx.clearRect(0, 0, canvas.width, canvas.height))
-    );
+export const canvasClear$ = fromEvent(clearCanvasBtn, 'click');
 
-canvasClear$.subscribe();
+export function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
 
 export function drawOnCanvas(
     prevPos: { x: number, y: number },
@@ -87,4 +86,6 @@ const canvasDrawing$ = drawMouseDown$
 export const canvasChange$ = merge(
     canvasDrawing$,
     canvasClear$
+).pipe(
+    filter(() => thisPlayerDrawing)
 );

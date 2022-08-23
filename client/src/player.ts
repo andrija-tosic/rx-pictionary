@@ -1,5 +1,5 @@
 import { combineLatest, Observable, of } from 'rxjs';
-import { map, takeUntil, pairwise, switchMap, tap, first, filter, share, shareReplay, debounceTime } from 'rxjs/operators';
+import { map, switchMap, tap, first, filter, share } from 'rxjs/operators';
 import { Player } from '../../shared/models/player';
 import { send$ } from './actions';
 import { connection$ } from './socket';

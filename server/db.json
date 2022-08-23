@@ -1,4 +1,17 @@
 {
-  "words": ["apple", "banana", "bomb"],
-  "players": []
+  "words": [
+    "apple",
+    "banana",
+    "bomb"
+  ],
+  "players": [
+    {
+      "name": "andr",
+      "score": 200
+    },
+    {
+      "name": "bro",
+      "score": 0
+    }
+  ]
 }

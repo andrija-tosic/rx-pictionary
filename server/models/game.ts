@@ -1,6 +1,13 @@
 import { AppServer } from './../src/server';
 
-type seconds = number;
+export type seconds = number;
+
+export interface GameState {
+    started: boolean;
+    revealedWord: string;
+    drawingPlayerId: string;
+    timePassed: seconds;
+}
 
 export class Game {
     started: boolean = false;
@@ -20,12 +27,24 @@ export class Game {
         this.start(word);
     }
 
+    public getState(): GameState {
+        return {
+            drawingPlayerId: this.drawingPlayerId,
+            revealedWord: this.revealedWord,
+            started: this.started,
+            timePassed: this.timePassed
+        }
+    }
+
     start(word: string) {
         this.started = true;
         this.word = word;
+        this.revealedWord = '_ '.repeat(word.length);
         this.timePassed = 0;
 
         this.timer = setInterval(() => {
+            this.server.emitTime(30 - this.timePassed);
+
             this.timePassed++;
 
             switch (this.timePassed) {
@@ -71,5 +90,10 @@ export class Game {
             }
 
         }, 1000);
+    }
+
+    stop() {
+        this.started = false;
+        clearInterval(this.timer);
     }
 }
