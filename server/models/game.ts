@@ -48,27 +48,9 @@ export class Game {
             this.timePassed++;
 
             switch (this.timePassed) {
-                case 10:
-                    this.revealedWord = this.word.split('').map((letter, i) => {
-                        if (i % 3 !== 0) {
-                            return '_';
-                        }
-                        else return letter;
-                    }).join('');
-
-                    this.server.revealWord(this.revealedWord);
-                    console.log(`Revealing ${this.revealedWord}`);
-
-                    break;
-
                 case 20:
                     this.revealedWord = this.word.split('').map((letter, i) => {
-                        if (letter !== '_')
-                            return letter;
-
-                        return '_';
-
-                        if (i % 2 === 0) {
+                        if (i % 3 !== 0) {
                             return '_';
                         }
                         else return letter;

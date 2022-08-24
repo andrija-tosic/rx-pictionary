@@ -135,7 +135,15 @@ listenOnSocket(EVENTS.NEW_PLAYER).subscribe((player: Player) => {
 });
 
 listenOnSocket(EVENTS.PLAYER_LEFT).subscribe((id: string) => {
-    console.log(`${id} left`);
+    const playerThatLeft = players.get(id)!;
+    console.log(`${playerThatLeft.name} left`);
+
+    appendMessageToList({
+        senderId: '',
+        senderName: 'info',
+        text: `${playerThatLeft.name} left`
+    });
+
     players.delete(id);
     renderPlayersList();
     printPlayers();

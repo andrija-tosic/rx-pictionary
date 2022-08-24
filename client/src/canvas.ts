@@ -1,5 +1,5 @@
 import { thisPlayerDrawing } from './index';
-import { map, switchMap, takeUntil, pairwise, filter } from 'rxjs/operators';
+import { map, switchMap, takeUntil, pairwise, filter, sampleTime } from 'rxjs/operators';
 import { tap } from 'rxjs/operators';
 import { fromEvent, merge } from "rxjs";
 
@@ -87,5 +87,6 @@ export const canvasChange$ = merge(
     canvasDrawing$,
     canvasClear$
 ).pipe(
+    sampleTime(100),
     filter(() => thisPlayerDrawing)
 );
