@@ -168,13 +168,11 @@ listenOnSocket(EVENTS.GAME_STATE).subscribe((gameState) => {
 })
 
 emitOnSocket(canvasChange$).subscribe(({ socket }) => {
-    // if (thisPlayerDrawing) {
     const base64ImageData = canvas.toDataURL("image/png");
     socket.emit(EVENTS.IMAGE, base64ImageData);
-    // }
 });
 
-listenOnSocket('image').subscribe((base64ImageData: string) => {
+listenOnSocket(EVENTS.IMAGE).subscribe((base64ImageData: string) => {
 
     console.log('received canvas change')
 
@@ -187,7 +185,7 @@ listenOnSocket('image').subscribe((base64ImageData: string) => {
 
 });
 
-listenOnSocket('correctGuess').subscribe((id: string) => {
+listenOnSocket(EVENTS.CORRECT_GUESS).subscribe((id: string) => {
     const player = players.get(id)!;
 
     players.set(id, {
@@ -199,6 +197,6 @@ listenOnSocket('correctGuess').subscribe((id: string) => {
     renderPlayersList();
 });
 
-listenOnSocket('correctWord').subscribe((word: string) => {
+listenOnSocket(EVENTS.CORRECT_WORD).subscribe((word: string) => {
     currentWordHeader.innerHTML = 'You guessed correctly! The word is ' + word + '. ✅';
 });

@@ -1,4 +1,4 @@
-import { AppServer } from './../src/server';
+import { AppServer } from '../../server/src/server';
 
 export type seconds = number;
 

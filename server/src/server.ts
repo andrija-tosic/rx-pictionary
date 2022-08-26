@@ -1,4 +1,4 @@
-import { SocketParameterType } from './../../client/src/socket';
+import { SocketParameterType } from '../../shared/socket-parameter';
 import { EVENTS } from './../../shared/socket-events';
 import express from "express";
 import cors from "cors";
@@ -8,9 +8,7 @@ import { Message } from "../../shared/models/message";
 import { Server, Socket } from "socket.io"
 import { Player } from "../../shared/models/player";
 import { ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData } from "../../shared/socket-events";
-import { Game } from "../models/game";
-
-type id = string;
+import { Game } from "../../shared/models/game";
 
 export class AppServer {
     private app: express.Application;

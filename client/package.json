@@ -1,5 +1,5 @@
 {
-  "name": "paint-guess-client",
+  "name": "@paint-guess/paint-guess-client",
   "version": "1.0.0",
   "description": "",
   "scripts": {

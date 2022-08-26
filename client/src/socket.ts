@@ -3,15 +3,13 @@ import { map, switchMap, tap } from "rxjs/operators";
 import { io, Socket } from "socket.io-client";
 import { ClientToServerEvents, ServerToClientEvents } from '../../shared/socket-events';
 
-export const socket$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>> = of(io("ws://localhost:3000"));
+const socketIOServer: string = "ws://localhost:1338";
+
+export const socket$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>> = of(io(socketIOServer));
 
 export const connection$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>> = socket$.pipe(
     switchMap((socket) => fromEvent(socket as any, "connect").pipe(map(() => socket)))
 );
-
-export type SocketParameterType = ServerToClientEvents[keyof ServerToClientEvents] extends []
-    ? Parameters<ServerToClientEvents[keyof ServerToClientEvents]>
-    : Parameters<ServerToClientEvents[keyof ServerToClientEvents]>[0]
 
 export function listenOnSocket
     <
