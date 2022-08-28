@@ -1,1 +1,1 @@
-# paint-guess
+# rx-pictionary

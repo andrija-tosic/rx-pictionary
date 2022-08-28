@@ -50,7 +50,7 @@ export class Game {
             switch (this.timePassed) {
                 case 20:
                     this.revealedWord = this.word.split('').map((letter, i) => {
-                        if (i % 3 !== 0) {
+                        if (letter !== ' ' && i % 3 !== 0) {
                             return '_';
                         }
                         else return letter;
