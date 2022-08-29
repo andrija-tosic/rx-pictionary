@@ -6,7 +6,7 @@
     "nodemon": "nodemon -q ./dist/bundle.js",
     "build": "webpack --config ./webpack.config.js",
     "watch": "webpack --watch --config ./webpack.config.js",
-    "json": "json-server --watch db.json --port 1337 --id name"
+    "json": "json-server --watch D:\\Desktop\\db.json --port 1337 --id name"
   },
   "repository": {
     "type": "git",

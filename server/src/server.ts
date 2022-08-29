@@ -95,31 +95,30 @@ export class AppServer {
             socket.on(EVENTS.NEW_PLAYER, async (name) => {
                 console.log(`Player ${socket.id}: ${name} connected`);
 
-                const res = await fetch(`${this.api}/players?name=${name}`);
-
-                const players = await res.json() as Omit<Player, 'id'>[];
-                console.log(players);
+                const res = await fetch(`${this.api}/players/${name}`);
+                const fetchedPlayer = await res.json() as Player;
 
                 const playerToEmit: Player = {
                     id: socket.id,
                     name: name,
-                    score: players.length !== 0 ? players[0].score : 0
+                    score: res.ok ? fetchedPlayer.score : 0
                 }
 
-                if (players.length === 0) {
+                console.log('fetched player:', fetchedPlayer);
+
+                if (res.status === 404) {
                     await fetch(`${this.api}/players`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            name: name,
                             score: 0
                         })
                     });
                 }
 
-                this.players.set(socket.id, playerToEmit)
+                this.players.set(socket.id, playerToEmit);
                 this.io.sockets.emit(EVENTS.NEW_PLAYER, playerToEmit);
 
                 if (this.game) {
@@ -184,12 +183,15 @@ export class AppServer {
                     const player = this.players.get(message.senderId)!;
                     player.score += scoreToAdd;
 
-                    const playerToPUT: Omit<Player, 'id'> = { name: player.name, score: player.score };
+                    const playerToPUT: Omit<Player, 'id' | 'name'> = { score: player.score };
 
                     console.log(playerToPUT, 'playerToPUT');
 
                     const res = await fetch(`${this.api}/players/${player.name}`, {
                         method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(playerToPUT)
                     });
 
