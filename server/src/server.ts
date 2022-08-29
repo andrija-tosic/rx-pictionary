@@ -20,6 +20,7 @@ export class AppServer {
     private api: string;
 
     private players = new Map<string, Player>;
+    private correctGuesses = new Set<string>;
 
     private drawingPlayerSocket: Socket<ClientToServerEvents, ServerToClientEvents>;
 
@@ -133,6 +134,7 @@ export class AppServer {
             });
 
             socket.on(EVENTS.START, async () => {
+                this.correctGuesses.clear();
 
                 const res = await fetch(`${this.api}/words`);
 
@@ -162,28 +164,33 @@ export class AppServer {
                     && socket.id !== this.drawingPlayerSocket.id
                     && message.text.trim().toLowerCase() === this.game?.word
                 ) {
-                    const scoreToAdd =
-                        this.game.timePassed > 0 && this.game.timePassed < 10
-                            ? 100
-                            : this.game.timePassed >= 10 && this.game.timePassed < 20
-                                ? 50
-                                : 25;
+                    if (!this.correctGuesses.has(socket.id)) {
 
-                    const scoreToAddToDrawingPlayer = scoreToAdd / 5;
+                        this.correctGuesses.add(socket.id);
+                        const scoreToAdd =
+                            this.game.timePassed > 0 && this.game.timePassed < 10
+                                ? 100
+                                : this.game.timePassed >= 10 && this.game.timePassed < 20
+                                    ? 50
+                                    : 25;
 
-                    await Promise.all([
-                        this.increasePlayerScore(socket, scoreToAdd),
-                        this.increasePlayerScore(this.drawingPlayerSocket, scoreToAddToDrawingPlayer)
-                    ]);
+                        const scoreToAddToDrawingPlayer = scoreToAdd / 5;
 
-                    socket.broadcast.emit(EVENTS.MESSAGE, {
-                        senderId: message.senderId,
-                        senderName: message.senderName,
-                        text: `has guessed the word! +${scoreToAdd} points ✅`
-                    });
+                        await Promise.all([
+                            this.increasePlayerScore(socket, scoreToAdd),
+                            this.increasePlayerScore(this.drawingPlayerSocket, scoreToAddToDrawingPlayer)
+                        ]);
 
-                    console.log(`${message.senderName} has guessed the word! +${scoreToAdd} points ✅`);
+                        socket.emit(EVENTS.CORRECT_WORD, this.game.word);
 
+                        socket.broadcast.emit(EVENTS.MESSAGE, {
+                            senderId: message.senderId,
+                            senderName: message.senderName,
+                            text: `has guessed the word! +${scoreToAdd} points ✅`
+                        });
+
+                        console.log(`${message.senderName} has guessed the word! +${scoreToAdd} points ✅`);
+                    }
                 }
                 else {
                     socket.broadcast.emit(EVENTS.MESSAGE, message);
@@ -216,8 +223,6 @@ export class AppServer {
         player.score += scoreToAdd;
 
         this.io.sockets.emit(EVENTS.CORRECT_GUESS, { id: socket.id, score: player.score });
-        socket.emit(EVENTS.CORRECT_WORD, this.game.word);
-
 
         const playerToPUT: Omit<Player, 'id' | 'name'> = { score: player.score };
 
