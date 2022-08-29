@@ -32,7 +32,7 @@ export interface ServerToClientEvents {
     allPlayers: (players: Player[]) => void;
     start: (word: string) => void;
     wordReveal: (word: string) => void;
-    correctGuess: (id: string) => void;
+    correctGuess: (data: { id: string, score: number }) => void;
     correctWord: (word: string) => void;
     time: (time: seconds) => void;
     clearCanvas: () => void;

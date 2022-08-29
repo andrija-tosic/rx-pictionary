@@ -185,13 +185,13 @@ listenOnSocket(EVENTS.IMAGE).subscribe((base64ImageData: string) => {
 
 });
 
-listenOnSocket(EVENTS.CORRECT_GUESS).subscribe((id: string) => {
-    const player = players.get(id)!;
+listenOnSocket(EVENTS.CORRECT_GUESS).subscribe((data: { id: string, score: number }) => {
+    const player = players.get(data.id)!;
 
-    players.set(id, {
+    players.set(data.id, {
         id: player.id,
         name: player.name,
-        score: player.score + 100
+        score: data.score
     });
 
     renderPlayersList();

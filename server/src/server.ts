@@ -169,34 +169,20 @@ export class AppServer {
                                 ? 50
                                 : 25;
 
+                    const scoreToAddToDrawingPlayer = scoreToAdd / 5;
+
+                    await Promise.all([
+                        this.increasePlayerScore(socket, scoreToAdd),
+                        this.increasePlayerScore(this.drawingPlayerSocket, scoreToAddToDrawingPlayer)
+                    ]);
+
                     socket.broadcast.emit(EVENTS.MESSAGE, {
                         senderId: message.senderId,
                         senderName: message.senderName,
                         text: `has guessed the word! +${scoreToAdd} points ✅`
                     });
 
-                    this.io.sockets.emit(EVENTS.CORRECT_GUESS, socket.id);
-                    socket.emit(EVENTS.CORRECT_WORD, this.game.word);
-
                     console.log(`${message.senderName} has guessed the word! +${scoreToAdd} points ✅`);
-
-                    const player = this.players.get(message.senderId)!;
-                    player.score += scoreToAdd;
-
-                    const playerToPUT: Omit<Player, 'id' | 'name'> = { score: player.score };
-
-                    console.log(playerToPUT, 'playerToPUT');
-
-                    const res = await fetch(`${this.api}/players/${player.name}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(playerToPUT)
-                    });
-
-                    if (res.ok)
-                        console.log(`Player score increased by ${scoreToAdd}`);
 
                 }
                 else {
@@ -223,6 +209,31 @@ export class AppServer {
                 socket.broadcast.emit(EVENTS.PLAYER_LEFT, socket.id);
             });
         });
+    }
+
+    async increasePlayerScore(socket: Socket<ClientToServerEvents, ServerToClientEvents>, scoreToAdd: number) {
+        const player = this.players.get(socket.id)!;
+        player.score += scoreToAdd;
+
+        this.io.sockets.emit(EVENTS.CORRECT_GUESS, { id: socket.id, score: player.score });
+        socket.emit(EVENTS.CORRECT_WORD, this.game.word);
+
+
+        const playerToPUT: Omit<Player, 'id' | 'name'> = { score: player.score };
+
+        console.log(playerToPUT, 'playerToPUT');
+
+        const res = await fetch(`${this.api}/players/${player.name}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(playerToPUT)
+        });
+
+        if (res.ok)
+            console.log(`Player score increased by ${scoreToAdd}`);
+
     }
 
     public getApp(): express.Application {
