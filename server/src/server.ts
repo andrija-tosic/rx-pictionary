@@ -8,7 +8,7 @@ import { Message } from "../../shared/models/message";
 import { Server, Socket } from "socket.io"
 import { Player } from "../../shared/models/player";
 import { ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData } from "../../shared/socket-events";
-import { Game } from "../../shared/models/game";
+import { Game } from "./game";
 
 export class AppServer {
     private app: express.Application;
@@ -16,15 +16,11 @@ export class AppServer {
     private io: Server;
     private socket: Socket<ClientToServerEvents, ServerToClientEvents>;
     private serverPort: string | number;
-    private jsonPort: string | number;
     private api: string;
-
-    private players = new Map<string, Player>;
-    private correctGuesses = new Set<string>;
 
     private drawingPlayerSocket: Socket<ClientToServerEvents, ServerToClientEvents>;
 
-    private game: Game;
+    private game: Game = new Game();
 
     constructor() {
         this.createApp();
@@ -50,7 +46,6 @@ export class AppServer {
         require("dotenv").config();
 
         this.serverPort = process.env.PORT!;
-        this.jsonPort = process.env.JSON_PORT!;
         this.api = process.env.API_URL!;
     }
 
@@ -88,10 +83,9 @@ export class AppServer {
         });
 
         this.io.on(EVENTS.CONNECT, (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
-            // console.log(`${socket.id} connected`);
             this.socket = socket;
 
-            this.io.sockets.emit(EVENTS.ALL_PLAYERS, Array.from(this.players.values()))
+            this.io.sockets.emit(EVENTS.ALL_PLAYERS, Array.from(this.game.players.values()))
 
             socket.on(EVENTS.NEW_PLAYER, async (name) => {
                 console.log(`Player ${socket.id}: ${name} connected`);
@@ -119,22 +113,19 @@ export class AppServer {
                     });
                 }
 
-                this.players.set(socket.id, playerToEmit);
+                this.game.players.set(socket.id, playerToEmit);
                 this.io.sockets.emit(EVENTS.NEW_PLAYER, playerToEmit);
 
-                if (this.game) {
-                    socket.emit(EVENTS.GAME_STATE, {
-                        started: this.game.started,
-                        drawingPlayerId: this.game.drawingPlayerId,
-                        revealedWord: this.game.revealedWord,
-                        timePassed: this.game.timePassed
-                    });
-                }
-
+                socket.emit(EVENTS.GAME_STATE, {
+                    started: this.game.started,
+                    drawingPlayerId: this.game.drawingPlayerId,
+                    revealedWord: this.game.revealedWord,
+                    timePassed: this.game.timePassed
+                });
             });
 
             socket.on(EVENTS.START, async () => {
-                this.correctGuesses.clear();
+                this.game.correctGuesses.clear();
 
                 const res = await fetch(`${this.api}/words`);
 
@@ -148,7 +139,7 @@ export class AppServer {
                 const words: string[] = await res.json() as string[];
                 const word = words[Math.floor(Math.random() * words.length)];
 
-                this.game = new Game(this, word, socket.id);
+                this.game.start(this, word, socket.id);
 
                 this.io.sockets.emit(EVENTS.START, '_'.repeat(word.length));
 
@@ -160,21 +151,15 @@ export class AppServer {
             socket.on(EVENTS.MESSAGE, async (message: Message) => {
                 console.log("[server](message): %s", JSON.stringify(message));
 
-                if (this.game?.started
+                if (this.game.started
                     && socket.id !== this.drawingPlayerSocket.id
-                    && message.text.trim().toLowerCase() === this.game?.word
+                    && message.text.trim().toLowerCase() === this.game.word
                 ) {
-                    if (!this.correctGuesses.has(socket.id)) {
+                    if (!this.game.correctGuesses.has(socket.id)) {
 
-                        this.correctGuesses.add(socket.id);
-                        const scoreToAdd =
-                            this.game.timePassed > 0 && this.game.timePassed < 10
-                                ? 100
-                                : this.game.timePassed >= 10 && this.game.timePassed < 20
-                                    ? 50
-                                    : 25;
+                        this.game.correctGuesses.add(socket.id);
 
-                        const scoreToAddToDrawingPlayer = scoreToAdd / 5;
+                        const { scoreToAdd, scoreToAddToDrawingPlayer } = this.game.calculateScoreToAdd();
 
                         await Promise.all([
                             this.increasePlayerScore(socket, scoreToAdd),
@@ -190,6 +175,13 @@ export class AppServer {
                         });
 
                         console.log(`${message.senderName} has guessed the word! +${scoreToAdd} points ✅`);
+
+                        setTimeout(() => {
+                            if (this.game.correctGuesses.size === this.game.players.size - 1) {
+                                this.game.stop();
+                                this.io.sockets.emit(EVENTS.STOP);
+                            }
+                        }, 3000);
                     }
                 }
                 else {
@@ -207,19 +199,19 @@ export class AppServer {
             })
 
             socket.on(EVENTS.DISCONNECT, () => {
-                console.log(`Player ${socket.id}: ${this.players.get(socket.id)?.name} disconnected`);
-                this.players.delete(socket.id);
-                if (this.game?.started && socket.id === this.game.drawingPlayerId) {
+                console.log(`Player ${socket.id}: ${this.game.players.get(socket.id)?.name} disconnected`);
+                this.game.players.delete(socket.id);
+                if (this.game.started && socket.id === this.game.drawingPlayerId) {
                     this.game.stop();
-                    socket.broadcast.emit(EVENTS.STOP);
+                    this.io.sockets.emit(EVENTS.STOP);
                 }
                 socket.broadcast.emit(EVENTS.PLAYER_LEFT, socket.id);
             });
         });
     }
 
-    async increasePlayerScore(socket: Socket<ClientToServerEvents, ServerToClientEvents>, scoreToAdd: number) {
-        const player = this.players.get(socket.id)!;
+    private async increasePlayerScore(socket: Socket<ClientToServerEvents, ServerToClientEvents>, scoreToAdd: number) {
+        const player = this.game.players.get(socket.id)!;
         player.score += scoreToAdd;
 
         this.io.sockets.emit(EVENTS.CORRECT_GUESS, { id: socket.id, score: player.score });

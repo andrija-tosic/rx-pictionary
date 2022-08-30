@@ -1,48 +1,55 @@
-import { Message } from './../../shared/models/message';
+import { RoundTime } from './../../shared/models/game-state';
+import { Message } from '../../shared/models/message';
 import { Player } from '../../shared/models/player';
 import { listenOnSocket, emitOnSocket } from "./socket";
-import { start$, startBtn } from './actions';
-import { canvas, ctx, canvasChange$, clearCanvasBtn, clearCanvas, canvasClear$ } from './canvas';
-import { appendMessageToList, renderPlayersList } from './render';
-import { name$, playerSentMessage$ } from './player';
+import { start$, startBtn } from './button-actions';
+import { clearCanvasBtn, clearCanvas, canvasClear$, loadImageToCanvas, canvasChange$ } from './canvas';
+import { appendMessageToChat, renderPlayersList } from './render';
+import { name$, playerSentMessage$ } from './player-actions';
 import { EVENTS } from '../../shared/socket-events';
-
-export const players = new Map<string, Player>;
+import { game } from './game';
 
 const wordSpan = document.getElementById('word')!;
 const timeSpan = document.getElementById('time')!;
 const currentWordHeader = document.getElementById('current-word-header')!;
 const messageInputDiv = document.getElementById('message-input-div')!;
+const messageInput = document.getElementById('message-input')! as HTMLInputElement;
 const timeHeader = document.getElementById('time-header')!;
 
-export let thisPlayerDrawing = false;
-
 function printPlayers() {
-    console.log(Array.from(players.values()));
+    console.log(Array.from(game.players.values()));
 }
 
-emitOnSocket(playerSentMessage$).subscribe(({ socket, data }) => {
+function show(el: HTMLElement) {
+    el.style.display = 'block';
+}
+
+function hide(el: HTMLElement) {
+    el.style.display = 'none';
+}
+
+emitOnSocket(playerSentMessage$).subscribe(({ socket, socketData }) => {
 
     console.log('appending message to list');
-    appendMessageToList({
-        senderId: data.id,
-        senderName: data.name,
-        text: (document.getElementById('message-input') as HTMLInputElement).value
+    appendMessageToChat({
+        senderId: socketData.id,
+        senderName: socketData.name,
+        text: messageInput.value
     });
 
     console.log('emitting message');
     socket.emit(EVENTS.MESSAGE, {
-        senderId: data.id,
-        senderName: data.name,
-        text: (document.getElementById('message-input') as HTMLInputElement).value
+        senderId: socketData.id,
+        senderName: socketData.name,
+        text: messageInput.value
     });
 
-    (document.getElementById('message-input') as HTMLInputElement).value = '';
+    messageInput.value = '';
 });
 
 listenOnSocket(EVENTS.MESSAGE).subscribe((message: Message) => {
     console.log('received message to list');
-    appendMessageToList({
+    appendMessageToChat({
         senderId: message.senderId,
         senderName: message.senderName,
         text: message.text
@@ -53,69 +60,69 @@ listenOnSocket(EVENTS.MESSAGE).subscribe((message: Message) => {
 
 
 emitOnSocket(start$).subscribe(({ socket }) => {
-    timeSpan.innerHTML = '30';
-    thisPlayerDrawing = true;
+    timeSpan.innerHTML = RoundTime.toString();
+    game.isDrawing$.next(true);
     clearCanvas();
-    clearCanvasBtn.style.display = 'block';
-    messageInputDiv.style.display = 'none';
-    timeHeader.style.display = 'block';
+    show(clearCanvasBtn);
+    hide(timeHeader);
+    hide(messageInputDiv);
 
     socket.emit(EVENTS.START);
 });
 
 listenOnSocket(EVENTS.STOP).subscribe(() => {
     clearCanvas();
-    clearCanvasBtn.style.display = 'none';
-    messageInputDiv.style.display = 'block';
-    currentWordHeader.innerHTML = '';
-    timeHeader.style.display = 'none';
-    startBtn.style.display = 'block';
+    show(startBtn);
+    show(messageInputDiv);
+    hide(clearCanvasBtn);
+    hide(currentWordHeader);
+    hide(timeHeader);
+});
 
-})
-
-listenOnSocket(EVENTS.START).subscribe((word: string) => {
+game.word$.subscribe((word: string) => {
     console.log(`Game started: ${word}`);
 
-    startBtn.style.display = 'none';
-    timeHeader.style.display = 'block';
+    hide(startBtn);
+    show(timeHeader);
+    show(currentWordHeader);
 
     clearCanvas();
 
     wordSpan.innerHTML = word.split('').map(letter => letter === '_' ? ' _ ' : letter).join('');
 });
 
-listenOnSocket(EVENTS.TIME).subscribe((seconds: number) => {
+game.timePassed$.subscribe((seconds: number) => {
     timeSpan.innerHTML = seconds.toString();
 
     seconds--;
 
     if (seconds === 0) {
         timeSpan.innerHTML = 'expired';
-        startBtn.style.display = 'block';
-        messageInputDiv.style.display = 'block';
+        show(startBtn);
+        show(messageInputDiv);
 
     }
 
-})
+});
 
-listenOnSocket(EVENTS.WORD_REVEAL).subscribe((word: string) => {
+game.revealedWord$.subscribe((word: string) => {
     console.log(`Revealed word is ${word}`);
 
     wordSpan.innerHTML = word.split('').map(letter => letter === '_' ? ' _ ' : letter).join('');
 });
 
-emitOnSocket(name$).subscribe(({ socket, data }) => {
-    socket.emit(EVENTS.NEW_PLAYER, data);
+emitOnSocket(name$).subscribe(({ socket, socketData }) => {
+    socket.emit(EVENTS.NEW_PLAYER, socketData);
 });
 
 listenOnSocket(EVENTS.ALL_PLAYERS).subscribe((playersList: Player[]) => {
 
-    players.clear();
+    game.players.clear();
     playersList.forEach(player => {
-        players.set(player.id, { id: player.id, name: player.name, score: player.score });
+        game.players.set(player.id, { id: player.id, name: player.name, score: player.score });
     });
 
-    renderPlayersList();
+    renderPlayersList(game.players);
     printPlayers();
 });
 
@@ -123,29 +130,29 @@ listenOnSocket(EVENTS.ALL_PLAYERS).subscribe((playersList: Player[]) => {
 listenOnSocket(EVENTS.NEW_PLAYER).subscribe((player: Player) => {
     console.log(`${player.name} joined`);
 
-    appendMessageToList({
+    appendMessageToChat({
         senderId: '',
         senderName: 'info',
         text: `${player.name} joined`
     });
 
-    players.set(player.id, { id: player.id, name: player.name, score: player.score });
-    renderPlayersList();
+    game.players.set(player.id, { id: player.id, name: player.name, score: player.score });
+    renderPlayersList(game.players);
     printPlayers();
 });
 
 listenOnSocket(EVENTS.PLAYER_LEFT).subscribe((id: string) => {
-    const playerThatLeft = players.get(id)!;
+    const playerThatLeft = game.players.get(id)!;
     console.log(`${playerThatLeft.name} left`);
 
-    appendMessageToList({
+    appendMessageToChat({
         senderId: '',
         senderName: 'info',
         text: `${playerThatLeft.name} left`
     });
 
-    players.delete(id);
-    renderPlayersList();
+    game.players.delete(id);
+    renderPlayersList(game.players);
     printPlayers();
 });
 
@@ -161,40 +168,33 @@ listenOnSocket(EVENTS.CLEAR_CANVAS).subscribe(() => {
 listenOnSocket(EVENTS.GAME_STATE).subscribe((gameState) => {
     if (gameState.started) {
         console.log(gameState);
-        startBtn.style.display = 'none';
+        hide(startBtn);
         timeSpan.innerHTML = (30 - gameState.timePassed).toString();
         wordSpan.innerHTML = gameState.revealedWord.split('').map(letter => letter === '_' ? ' _ ' : letter).join('');
     }
 })
 
-emitOnSocket(canvasChange$).subscribe(({ socket }) => {
-    const base64ImageData = canvas.toDataURL("image/png");
+emitOnSocket(canvasChange$).subscribe(({ socket, socketData }) => {
+    const base64ImageData = socketData;
     socket.emit(EVENTS.IMAGE, base64ImageData);
 });
 
 listenOnSocket(EVENTS.IMAGE).subscribe((base64ImageData: string) => {
+    console.log('received canvas change');
 
-    console.log('received canvas change')
-
-    const image = new Image();
-    image.src = base64ImageData;
-
-    image.onload = () => {
-        ctx.drawImage(image, 0, 0);
-    };
-
+    loadImageToCanvas(base64ImageData);
 });
 
-listenOnSocket(EVENTS.CORRECT_GUESS).subscribe((data: { id: string, score: number }) => {
-    const player = players.get(data.id)!;
+listenOnSocket(EVENTS.CORRECT_GUESS).subscribe((playerData: { id: string, score: number }) => {
+    const player = game.players.get(playerData.id)!;
 
-    players.set(data.id, {
+    game.players.set(playerData.id, {
         id: player.id,
         name: player.name,
-        score: data.score
+        score: playerData.score
     });
 
-    renderPlayersList();
+    renderPlayersList(game.players);
 });
 
 listenOnSocket(EVENTS.CORRECT_WORD).subscribe((word: string) => {

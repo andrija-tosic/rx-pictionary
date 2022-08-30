@@ -1,7 +1,7 @@
 import { combineLatest, Observable, of } from 'rxjs';
 import { map, switchMap, tap, first, filter, share } from 'rxjs/operators';
 import { Player } from '../../shared/models/player';
-import { send$ } from './actions';
+import { send$ } from './button-actions';
 import { connection$ } from './socket';
 
 const name = localStorage.getItem('name');

@@ -1,6 +1,6 @@
 import { Player } from './models/player';
 import { Message } from './models/message';
-import { seconds, GameState } from './models/game';
+import { seconds, GameState } from '../shared/models/game-state';
 
 export enum EVENTS {
     CONNECT = 'connect',

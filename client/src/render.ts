@@ -1,18 +1,16 @@
 import { Message } from "../../shared/models/message";
-import { players } from "./index";
+import { Player } from "../../shared/models/player";
 
-export function appendMessageToList(message: Message) {
+export function appendMessageToChat(message: Message) {
     const li = document.createElement('li');
     li.innerHTML = message.senderName + ": " + message.text;
 
     document.getElementById('message-list')!.appendChild(li);
-    // console.log('appending to ul')
-
 }
 
 const playersUl = document.getElementById('players')!;
 
-export function renderPlayersList() {
+export function renderPlayersList(players: Map<string, Player>) {
     playersUl.innerHTML = '';
 
     const sortedPlayers = Array.from(players.values())

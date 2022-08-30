@@ -3,9 +3,9 @@ import { map, switchMap, tap } from "rxjs/operators";
 import { io, Socket } from "socket.io-client";
 import { ClientToServerEvents, ServerToClientEvents } from '../../shared/socket-events';
 
-const socketIOServer: string = "ws://localhost:1338";
+const socketIOServerURL: string = "ws://localhost:1338";
 
-export const socket$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>> = of(io(socketIOServer));
+export const socket$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>> = of(io(socketIOServerURL));
 
 export const connection$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>> = socket$.pipe(
     switchMap((socket) => fromEvent(socket as any, "connect").pipe(map(() => socket)))
@@ -25,11 +25,10 @@ export function listenOnSocket
 
 export function emitOnSocket<T>(observable: Observable<T>): Observable<{
     socket: Socket<ServerToClientEvents, ClientToServerEvents>,
-    data: T
+    socketData: T
 }> {
     return connection$.pipe(
         switchMap((socket) => observable.pipe(
-            // tap((data) => console.log('connection switchMap', data)),
-            map((data) => ({ socket, data }))))
+            map((socketData) => ({ socket, socketData }))))
     );
 }

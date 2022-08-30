@@ -1,18 +1,29 @@
-import { AppServer } from '../../server/src/server';
+import { GameState, RoundTime } from '../../shared/models/game-state';
+import { Player } from '../../shared/models/player';
+import { AppServer } from './server';
 
 export type seconds = number;
 
-export interface GameState {
-    started: boolean;
-    revealedWord: string;
-    drawingPlayerId: string;
-    timePassed: seconds;
+const enum ScoreLevel {
+    Low = 25,
+    Medium = 50,
+    High = 100
 }
+const enum TimeStamps {
+    Early = 0,
+    Medium = 15,
+    Late = 20
+}
+
 
 export class Game {
     started: boolean = false;
     word: string;
     revealedWord: string;
+
+    players = new Map<string, Player>();
+
+    correctGuesses = new Set<string>();
 
     drawingPlayerId: string;
 
@@ -21,11 +32,9 @@ export class Game {
 
     server: AppServer;
 
-    constructor(server: AppServer, word: string, drawingPlayerId: string) {
-        this.server = server;
-        this.drawingPlayerId = drawingPlayerId;
-        this.start(word);
-    }
+    readonly drawingPlayerScoreFactor = 5;
+
+    constructor() { }
 
     public getState(): GameState {
         return {
@@ -36,19 +45,36 @@ export class Game {
         }
     }
 
-    start(word: string) {
+    public calculateScoreToAdd(): { scoreToAdd: number, scoreToAddToDrawingPlayer: number } {
+        const scoreToAdd =
+            this.timePassed > TimeStamps.Early && this.timePassed < TimeStamps.Medium
+                ? ScoreLevel.High
+                : this.timePassed >= TimeStamps.Medium && this.timePassed < TimeStamps.Late
+                    ? ScoreLevel.Medium
+                    : ScoreLevel.Low;
+
+        const scoreToAddToDrawingPlayer = scoreToAdd / this.drawingPlayerScoreFactor;
+
+        return { scoreToAdd, scoreToAddToDrawingPlayer };
+    }
+
+    start(server: AppServer, word: string, drawingPlayerId: string) {
+        this.server = server;
+        this.word = word;
+        this.drawingPlayerId = drawingPlayerId;
+
         this.started = true;
         this.word = word;
         this.revealedWord = '_ '.repeat(word.length);
         this.timePassed = 0;
 
         this.timer = setInterval(() => {
-            this.server.emitTime(30 - this.timePassed);
+            this.server.emitTime(RoundTime - this.timePassed);
 
             this.timePassed++;
 
             switch (this.timePassed) {
-                case 20:
+                case TimeStamps.Medium:
                     this.revealedWord = this.word.split('').map((letter, i) => {
                         if (i % 3 !== 0) {
                             return '_';
@@ -61,7 +87,7 @@ export class Game {
 
                     break;
 
-                case 30:
+                case RoundTime:
                     clearInterval(this.timer);
                     this.server.revealWord(this.word);
                     this.started = false;
