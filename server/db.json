@@ -1,0 +1,58 @@
+{
+  "words": [
+    "apple",
+    "banana",
+    "molecule",
+    "rain",
+    "fly",
+    "circle",
+    "milk",
+    "hamburger",
+    "ship",
+    "bomb",
+    "seat",
+    "school",
+    "wheelie",
+    "country",
+    "edge",
+    "putty",
+    "crane",
+    "testify",
+    "devious",
+    "coastline",
+    "sunburn",
+    "factory",
+    "double",
+    "safe",
+    "catalog",
+    "twist",
+    "receipt",
+    "Internet",
+    "weather",
+    "reservoir",
+    "beanstalk",
+    "snag",
+    "deep",
+    "flock",
+    "president",
+    "carat"
+  ],
+  "players": [
+    {
+      "name": "andr",
+      "score": 200
+    },
+    {
+      "name": "bro",
+      "score": 0
+    },
+    {
+      "score": 550,
+      "name": "andrija"
+    },
+    {
+      "score": 1310,
+      "name": "nemanja"
+    }
+  ]
+}

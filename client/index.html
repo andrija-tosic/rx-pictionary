@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rx Pictionary</title>
+    <link rel="icon" type="image/x-icon" href="../assets/pencil.svg" />
+
+    <link rel="stylesheet" href="./dist/style.css" />
+  </head>
+  <body>
+    <h1>Rx Pictionary</h1>
+
+    <button id="start-btn">Start new game</button>
+
+    <h2 id="current-word-header"><span id="word"></span></h2>
+
+    <h3 style="display: none" id="time-header">
+      Time: <span id="time"></span>
+    </h3>
+
+    <div class="sketch" id="sketch">
+      <div id="playersOuter">
+        <h4>Online players:</h4>
+        <ol id="players"></ol>
+      </div>
+
+      <div>
+        <canvas width="800px" height="600px" className="board" id="board">
+        </canvas>
+        <div id="canvas-controls">
+          <label for="color-picker">Color</label>
+          <input type="color" id="color-picker" />
+          <button id="clear-canvas-btn">🗑 Clear</button>
+        </div>
+      </div>
+      <div class="messages">
+        <ul id="message-list">
+          <h2>Messages</h2>
+        </ul>
+        <div id="message-input-div">
+          <input type="text" id="message-input" />
+          <button id="send-btn">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./dist/bundle.js"></script>
+  </body>
+</html>
