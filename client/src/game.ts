@@ -1,7 +1,7 @@
 import { map, tap } from 'rxjs/operators';
 import { Player, GameState } from '@rx-pictionary/lib/models';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { listenOnSocket } from './socket';
+import { SocketUtils } from './socket';
 import { EVENTS } from '@rx-pictionary/lib/socket';
 
 export class Game {
@@ -22,13 +22,13 @@ export class Game {
     canDraw$ = new BehaviorSubject<boolean>(false);
 
     constructor() {
-        listenOnSocket(EVENTS.START).subscribe(word => this.start(word));
-        listenOnSocket(EVENTS.STOP).subscribe(() => this.stop());
-        listenOnSocket(EVENTS.WORD_REVEAL).subscribe(this.revealedWord$);
-        listenOnSocket(EVENTS.TIME).subscribe(this.timePassed$);
-        listenOnSocket(EVENTS.CORRECT_WORD).subscribe(this.correctWord$);
+        SocketUtils.listenOnSocket(EVENTS.FROM_SERVER.START).subscribe(word => this.start(word));
+        SocketUtils.listenOnSocket(EVENTS.FROM_SERVER.STOP).subscribe(() => this.stop());
+        SocketUtils.listenOnSocket(EVENTS.FROM_SERVER.WORD_REVEAL).subscribe(this.revealedWord$);
+        SocketUtils.listenOnSocket(EVENTS.FROM_SERVER.TIME).subscribe(this.timePassed$);
+        SocketUtils.listenOnSocket(EVENTS.FROM_SERVER.CORRECT_WORD).subscribe(this.correctWord$);
 
-        listenOnSocket(EVENTS.CORRECT_GUESS)
+        SocketUtils.listenOnSocket(EVENTS.FROM_SERVER.CORRECT_GUESS)
             .pipe(
                 tap((playerData) => {
                     const player = this.players.get(playerData.id)!;
@@ -42,28 +42,28 @@ export class Game {
             )
             .subscribe(this.correctGuess$);
 
-        listenOnSocket(EVENTS.GAME_STATE).subscribe(this.gameState$);
+        SocketUtils.listenOnSocket(EVENTS.FROM_SERVER.GAME_STATE).subscribe(this.gameState$);
 
-        listenOnSocket(EVENTS.NEW_PLAYER)
+        SocketUtils.listenOnSocket(EVENTS.FROM_SERVER.NEW_PLAYER)
             .pipe(
                 tap((player) => {
-                    this.players.set(player.id, { id: player.id, name: player.name, score: player.score });
+                    this.players.set(player.id, player);
                 })
             )
             .subscribe(this.newPlayer$);
 
-        listenOnSocket(EVENTS.ALL_PLAYERS)
+        SocketUtils.listenOnSocket(EVENTS.FROM_SERVER.ALL_PLAYERS)
             .pipe(
                 tap((playersList) => {
                     this.players.clear();
                     playersList.forEach(player => {
-                        this.players.set(player.id, { id: player.id, name: player.name, score: player.score });
+                        this.players.set(player.id, player);
                     });
                 })
             )
             .subscribe(this.allPlayer$);
 
-        listenOnSocket(EVENTS.PLAYER_LEFT)
+        SocketUtils.listenOnSocket(EVENTS.FROM_SERVER.PLAYER_LEFT)
             .pipe(
                 map((id: string) => {
                     const playerThatLeft = this.players.get(id)!;

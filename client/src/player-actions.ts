@@ -1,43 +1,39 @@
 import { combineLatest, Observable, of } from 'rxjs';
-import { map, switchMap, tap, first, filter, share } from 'rxjs/operators';
+import { map, switchMap, first, filter, share } from 'rxjs/operators';
 import { Player } from '@rx-pictionary/lib/models'
 import { send$ } from './button-actions';
-import { connection$ } from './socket';
+import { SocketUtils } from './socket';
 
-const name = localStorage.getItem('name');
-export let name$: Observable<string>;
+export namespace PlayerActions {
+    const name = localStorage.getItem('name');
+    export let name$: Observable<string>;
 
-if (name) {
-    name$ = of(name)
+    if (name) {
+        name$ = of(name);
+    }
+    else {
+        name$ = of(prompt("Enter your name"))
+            .pipe(
+                first(),
+                filter((name) => !!name),
+                switchMap((name) => of(name!.trim()))
+            );
+    }
+
+    name$.subscribe((name: string) => {
+        localStorage.setItem('name', name);
+    });
+
+    const thisPlayer$: Observable<Player> = combineLatest([SocketUtils.connection$, name$])
         .pipe(
-        // tap((name) => console.log(name))
-    );
-}
-else {
-    name$ = of(prompt("Enter your name"))
-        .pipe(
-            first(),
-            filter((name) => !!name),
-            switchMap((name) => of(name!.trim()))
+            map(([socket, name]) => ({ id: socket?.id, name, score: 0 }))
         );
-}
 
-name$.subscribe((name: string) => {
-    localStorage.setItem('name', name);
-});
-
-const thisPlayer$: Observable<Player> = combineLatest([connection$, name$])
-    .pipe(
-        map(([socket, name]) => ({ id: socket?.id, name, score: 0 })),
-        tap(() => console.log('thisPlayer'))
+    export const playerSentMessage$: Observable<Player> = combineLatest([thisPlayer$, send$]
+    ).pipe(
+        map(data => data[0]),
+        share()
     );
 
-export const playerSentMessage$: Observable<Player> = combineLatest([thisPlayer$, send$]
-).pipe(
-    map(data => data[0]),
-    tap(() => console.log('playerSent')),
-    share()
-);
-
-// thisPlayer$.subscribe();
-playerSentMessage$.subscribe();
+    playerSentMessage$.subscribe();
+}

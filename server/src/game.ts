@@ -45,7 +45,7 @@ export class Game {
         }
     }
 
-    public calculateScoreToAdd(): { scoreToAdd: number, scoreToAddToDrawingPlayer: number } {
+    private calculateScoreToAdd(): number {
         const scoreToAdd =
             this.timePassed > TimeStamps.Early && this.timePassed < TimeStamps.Medium
                 ? ScoreLevel.High
@@ -53,9 +53,19 @@ export class Game {
                     ? ScoreLevel.Medium
                     : ScoreLevel.Low;
 
-        const scoreToAddToDrawingPlayer = scoreToAdd / this.drawingPlayerScoreFactor;
+        return scoreToAdd;
+    }
 
-        return { scoreToAdd, scoreToAddToDrawingPlayer };
+    public increasePlayerScore(id: string): { correctGuessPlayer: Player, drawingPlayer: Player, scoreAdded: number } {
+        const scoreToAdd = this.calculateScoreToAdd();
+
+        const correctGuessPlayer = this.players.get(id)!;
+        correctGuessPlayer.score += scoreToAdd;
+
+        const drawingPlayer = this.players.get(this.drawingPlayerId)!;
+        drawingPlayer.score += scoreToAdd / this.drawingPlayerScoreFactor;
+
+        return { correctGuessPlayer, drawingPlayer, scoreAdded: scoreToAdd };
     }
 
     start(word: string, drawingPlayerId: string): void {

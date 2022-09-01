@@ -2,23 +2,31 @@ import { Player } from '../models/player';
 import { Message } from '../models/message';
 import { seconds, GameState } from '../models/game-state';
 
-export enum EVENTS {
-    CONNECT = 'connect',
-    DISCONNECT = 'disconnect',
-    ERROR = 'error',
-    PLAYER_LEFT = 'playerLeft',
-    MESSAGE = 'message',
-    IMAGE = 'image',
-    NEW_PLAYER = 'newPlayer',
-    ALL_PLAYERS = 'allPlayers',
-    START = 'start',
-    WORD_REVEAL = 'wordReveal',
-    CORRECT_GUESS = 'correctGuess',
-    CORRECT_WORD = 'correctWord',
-    TIME = 'time',
-    CLEAR_CANVAS = 'clearCanvas',
-    GAME_STATE = 'gameState',
-    STOP = 'stop',
+export namespace EVENTS {
+    export enum FROM_SERVER {
+        CONNECT = 'connect',
+        DISCONNECT = 'disconnect',
+        ERROR = 'error',
+        START = 'start',
+        NEW_PLAYER = 'newPlayer',
+        PLAYER_LEFT = 'playerLeft',
+        ALL_PLAYERS = 'allPlayers',
+        WORD_REVEAL = 'wordReveal',
+        CORRECT_GUESS = 'correctGuess',
+        CORRECT_WORD = 'correctWord',
+        TIME = 'time',
+        GAME_STATE = 'gameState',
+        IMAGE = 'image',
+        STOP = 'stop'
+    }
+
+    export enum FROM_CLIENT {
+        START = 'start',
+        MESSAGE = 'message',
+        IMAGE = 'image',
+        NEW_PLAYER = 'newPlayer',
+        CLEAR_CANVAS = 'clearCanvas'
+    }
 }
 
 export interface ServerToClientEvents {
