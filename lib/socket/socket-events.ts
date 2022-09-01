@@ -1,3 +1,4 @@
+import { CorrectAndDrawingPlayer } from '../models/correct-guess-data';
 import { Player } from '../models/player';
 import { Message } from '../models/message';
 import { seconds, GameState } from '../models/game-state';
@@ -40,7 +41,7 @@ export interface ServerToClientEvents {
     allPlayers: (players: Player[]) => void;
     start: (word: string) => void;
     wordReveal: (word: string) => void;
-    correctGuess: (data: { id: string, score: number }) => void;
+    correctGuess: (correctAndDrawingPlayer: CorrectAndDrawingPlayer) => void;
     correctWord: (word: string) => void;
     time: (time: seconds) => void;
     clearCanvas: () => void;

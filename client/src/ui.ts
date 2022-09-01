@@ -26,8 +26,6 @@ export namespace UI {
             .reverse();
 
         sortedPlayers.forEach(player => {
-            players.set(player.id, { id: player.id, name: player.name, score: player.score });
-
             const li = document.createElement('li');
             li.innerHTML = `${player.name} (${player.score} points)`;
             playersUl.appendChild(li);

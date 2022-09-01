@@ -4,8 +4,8 @@ import { map, switchMap } from "rxjs/operators";
 import { io, Socket } from "socket.io-client";
 import { ClientToServerEvents, ServerToClientEvents } from '@rx-pictionary/lib/socket';
 
-const socketIOURL = process.env.SOCKETIO_URL!;
-const socketIOPort = process.env.SERVER_PORT!;
+const socketIOURL = 'ws://localhost';
+const socketIOPort = 1338;
 
 export namespace SocketIO {
     const socket$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>>

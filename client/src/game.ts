@@ -1,5 +1,5 @@
 import { map, tap } from 'rxjs/operators';
-import { Player, GameState } from '@rx-pictionary/lib/models';
+import { Player, GameState, CorrectAndDrawingPlayer } from '@rx-pictionary/lib/models';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { SocketIO } from './socket';
 import { EVENTS } from '@rx-pictionary/lib/socket';
@@ -10,7 +10,7 @@ export class Game {
     revealedWord$ = new Subject<string>();
     correctWord$ = new Subject<string>();
     timePassed$ = new Subject<number>();
-    correctGuess$ = new Subject<Pick<Player, 'id' | 'score'>>();
+    correctGuess$ = new Subject<CorrectAndDrawingPlayer>();
     gameState$ = new Subject<GameState>();
 
     allPlayer$ = new Subject<Player[]>();
@@ -30,14 +30,16 @@ export class Game {
 
         SocketIO.listenOnSocket(EVENTS.FROM_SERVER.CORRECT_GUESS)
             .pipe(
-                tap((playerData) => {
-                    const player = this.players.get(playerData.id)!;
+                tap((correctAndDrawingPlayer: CorrectAndDrawingPlayer) => {
 
-                    this.players.set(playerData.id, {
-                        id: player.id,
-                        name: player.name,
-                        score: playerData.score
-                    });
+                    const correctPlayer = this.players.get(correctAndDrawingPlayer.correctPlayer.id)!;
+                    const drawingPlayer = this.players.get(correctAndDrawingPlayer.drawingPlayer.id)!;
+
+                    const newCorrectPlayerScore = correctAndDrawingPlayer.correctPlayer.score;
+                    const newDrawingPlayerScore = correctAndDrawingPlayer.drawingPlayer.score;
+
+                    this.players.set(correctPlayer.id, { ...correctPlayer, score: newCorrectPlayerScore });
+                    this.players.set(drawingPlayer.id, { ...drawingPlayer, score: newDrawingPlayerScore });
                 })
             )
             .subscribe(this.correctGuess$);

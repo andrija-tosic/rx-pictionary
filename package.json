@@ -6,7 +6,7 @@
     "server:watch": "cd ./server && npm run watch",
     "server:json": "cd ./server && npm run json",
     "server:nodemon": "cd ./server && npm run nodemon",
-    "client:watch": "cd ./server && npm run watch",
+    "client:watch": "cd ./client && npm run watch",
     "start": "npm-run-all --parallel server:watch server:json server:nodemon client:watch"
   },
   "repository": {

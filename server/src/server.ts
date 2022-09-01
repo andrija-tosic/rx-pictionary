@@ -109,7 +109,7 @@ export class AppServer {
                 console.log('fetched player:', fetchedPlayer);
 
                 if (res.status === HttpStatus.NOT_FOUND) {
-                    await API.fetchAPI(`players/${name}`, 'POST', { score: 0 });
+                    await API.fetchAPI(`players`, 'POST', { name: name, score: 0 });
                 }
 
                 this.game.players.set(socket.id, playerToEmit);
@@ -206,17 +206,17 @@ export class AppServer {
 
     private async increasePlayerScore(socket: Socket<ClientToServerEvents, ServerToClientEvents>): Promise<number> {
 
-        const { correctGuessPlayer, drawingPlayer, scoreAdded } = this.game.increasePlayerScore(socket.id);
+        const { correctPlayer, drawingPlayer, scoreAdded } = this.game.increasePlayerScore(socket.id);
 
-        const correctGuessPlayerToPUT: Omit<Player, 'id' | 'name'> = { score: correctGuessPlayer.score };
+        const correctGuessPlayerToPUT: Omit<Player, 'id' | 'name'> = { score: correctPlayer.score };
         const drawingPlayerToPUT: Omit<Player, 'id' | 'name'> = { score: drawingPlayer.score };
 
         await Promise.all([
-            API.fetchAPI(`players/${correctGuessPlayer.name}`, 'PUT', correctGuessPlayerToPUT),
+            API.fetchAPI(`players/${correctPlayer.name}`, 'PUT', correctGuessPlayerToPUT),
             API.fetchAPI(`players/${drawingPlayer.name}`, 'PUT', drawingPlayerToPUT)
         ]);
 
-        this.io.sockets.emit(EVENTS.FROM_SERVER.CORRECT_GUESS, { id: socket.id, score: correctGuessPlayer.score });
+        this.io.sockets.emit(EVENTS.FROM_SERVER.CORRECT_GUESS, { correctPlayer, drawingPlayer });
 
         return scoreAdded;
     }

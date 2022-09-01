@@ -56,16 +56,16 @@ export class Game {
         return scoreToAdd;
     }
 
-    public increasePlayerScore(id: string): { correctGuessPlayer: Player, drawingPlayer: Player, scoreAdded: number } {
+    public increasePlayerScore(id: string): { correctPlayer: Player, drawingPlayer: Player, scoreAdded: number } {
         const scoreToAdd = this.calculateScoreToAdd();
 
-        const correctGuessPlayer = this.players.get(id)!;
-        correctGuessPlayer.score += scoreToAdd;
+        const correctPlayer = this.players.get(id)!;
+        correctPlayer.score += scoreToAdd;
 
         const drawingPlayer = this.players.get(this.drawingPlayerId)!;
         drawingPlayer.score += scoreToAdd / this.drawingPlayerScoreFactor;
 
-        return { correctGuessPlayer, drawingPlayer, scoreAdded: scoreToAdd };
+        return { correctPlayer, drawingPlayer, scoreAdded: scoreToAdd };
     }
 
     start(word: string, drawingPlayerId: string): void {
