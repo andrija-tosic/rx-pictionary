@@ -1,5 +1,4 @@
-import { GameState, RoundTime } from '../../shared/models/game-state';
-import { Player } from '../../shared/models/player';
+import { GameState, RoundTime, Player } from '@rx-pictionary/lib/models';
 import { AppServer } from './server';
 
 export type seconds = number;
@@ -29,11 +28,13 @@ export class Game {
     timer: NodeJS.Timer;
     timePassed: seconds;
 
-    server: AppServer;
+    private readonly server: AppServer;
 
     readonly drawingPlayerScoreFactor = 5;
 
-    constructor() { }
+    constructor(private readonly s: AppServer) {
+        this.server = s;
+    }
 
     public getState(): GameState {
         return {
@@ -57,8 +58,7 @@ export class Game {
         return { scoreToAdd, scoreToAddToDrawingPlayer };
     }
 
-    start(server: AppServer, word: string, drawingPlayerId: string) {
-        this.server = server;
+    start(word: string, drawingPlayerId: string): void {
         this.word = word;
         this.drawingPlayerId = drawingPlayerId;
 
@@ -97,7 +97,7 @@ export class Game {
         }, 1000);
     }
 
-    stop() {
+    stop(): void {
         this.running = false;
         clearInterval(this.timer);
     }

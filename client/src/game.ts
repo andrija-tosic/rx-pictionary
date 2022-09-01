@@ -1,9 +1,8 @@
 import { map, tap } from 'rxjs/operators';
-import { GameState } from './../../shared/models/game-state';
+import { Player, GameState } from '@rx-pictionary/lib/models';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { Player } from '../../shared/models/player';
 import { listenOnSocket } from './socket';
-import { EVENTS } from '../../shared/socket-events';
+import { EVENTS } from '@rx-pictionary/lib/socket';
 
 export class Game {
     start$ = new Subject<string>();
@@ -20,7 +19,7 @@ export class Game {
 
     players = new Map<string, Player>();
 
-    isDrawing$ = new BehaviorSubject<boolean>(false);
+    canDraw$ = new BehaviorSubject<boolean>(false);
 
     constructor() {
         listenOnSocket(EVENTS.START).subscribe(word => this.start(word));
@@ -70,22 +69,22 @@ export class Game {
                     const playerThatLeft = this.players.get(id)!;
                     this.players.delete(id);
 
-                    return playerThatLeft
+                    return playerThatLeft;
                 })
             )
             .subscribe(this.playerLeft$);
 
-        this.isDrawing$.next(true);
+        this.canDraw$.next(true);
     }
 
     private start(word: string) {
         this.start$.next(word);
         this.revealedWord$.next('_ '.repeat(word.length));
-        this.isDrawing$.next(false)
+        this.canDraw$.next(false)
     }
 
     private stop() {
         this.stop$.next();
-        this.isDrawing$.next(true);
+        this.canDraw$.next(true);
     }
 }

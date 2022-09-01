@@ -1,13 +1,13 @@
 import { filter } from 'rxjs/operators';
 import { fromEvent, merge } from "rxjs";
 
-export const startBtn = document.getElementById('start-btn')!;
-const sendBtn = document.getElementById('send-btn')! as HTMLButtonElement;
+export const startButton = document.getElementById('start-btn')!;
+const sendButton = document.getElementById('send-btn')! as HTMLButtonElement;
 const messageInput = document.getElementById('message-input')! as HTMLInputElement;
 
-export const start$ = fromEvent(startBtn, 'click');
+export const start$ = fromEvent(startButton, 'click');
 
-const sendBtnPress$ = fromEvent(sendBtn, 'click');
+const sendButtonClick$ = fromEvent(sendButton, 'click');
 
 const enterKeyPress$ = fromEvent(messageInput, 'keypress')
     .pipe(
@@ -15,7 +15,7 @@ const enterKeyPress$ = fromEvent(messageInput, 'keypress')
     );
 
 export const send$ = merge(
-    sendBtnPress$,
+    sendButtonClick$,
     enterKeyPress$
 ).pipe(
     filter(() => !!messageInput.value),

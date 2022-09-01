@@ -1,12 +1,10 @@
-import { RoundTime } from './../../shared/models/game-state';
-import { Message } from '../../shared/models/message';
-import { Player } from '../../shared/models/player';
+import { Message, Player, RoundTime } from '@rx-pictionary/lib/models'
 import { listenOnSocket, emitOnSocket } from "./socket";
-import { start$, startBtn } from './button-actions';
-import { clearCanvasBtn, clearCanvas, canvasClear$, loadImageToCanvas, getCanvasChangeStream as getCanvasStream } from './canvas';
+import { start$, startButton } from './button-actions';
+import { clearCanvasButton, clearCanvas, canvasClear$, loadImageToCanvas, getCanvasChangeStream as getCanvasStream } from './canvas';
 import { appendMessageToChat, hide, renderPlayersList, show } from './render';
 import { name$, playerSentMessage$ } from './player-actions';
-import { EVENTS } from '../../shared/socket-events';
+import { EVENTS } from '@rx-pictionary/lib/socket';
 import { Game } from './game';
 
 const timeSpan = document.getElementById('time')!;
@@ -14,9 +12,10 @@ const currentWordHeader = document.getElementById('current-word-header')!;
 const messageInputDiv = document.getElementById('message-input-div')!;
 const messageInput = document.getElementById('message-input')! as HTMLInputElement;
 const timeHeader = document.getElementById('time-header')!;
+hide(timeHeader);
 
 const game = new Game();
-const canvasChange$ = getCanvasStream(game.isDrawing$);
+const canvasChange$ = getCanvasStream(game.canDraw$);
 
 function printPlayers() {
     console.log(Array.from(game.players.values()));
@@ -24,17 +23,15 @@ function printPlayers() {
 
 emitOnSocket(playerSentMessage$).subscribe(({ socket, socketData: player }) => {
 
-    appendMessageToChat({
+    const message: Message = {
         senderId: player.id,
         senderName: player.name,
         text: messageInput.value
-    });
+    };
 
-    socket.emit(EVENTS.MESSAGE, {
-        senderId: player.id,
-        senderName: player.name,
-        text: messageInput.value
-    });
+    appendMessageToChat(message);
+
+    socket.emit(EVENTS.MESSAGE, message);
 
     messageInput.value = '';
 });
@@ -53,17 +50,17 @@ function setupForGameStart() {
     timeSpan.innerHTML = RoundTime.toString();
 
     clearCanvas();
-    hide(startBtn);
+    hide(startButton);
     show(timeHeader);
     show(currentWordHeader);
 }
 
 // emits when current player is drawing
 emitOnSocket(start$).subscribe(({ socket }) => {
-    game.isDrawing$.next(true);
+    game.canDraw$.next(true);
 
     setupForGameStart();
-    show(clearCanvasBtn);
+    show(clearCanvasButton);
     hide(messageInputDiv);
 
     socket.emit(EVENTS.START);
@@ -79,9 +76,10 @@ game.start$.subscribe((word: string) => {
 });
 
 game.stop$.subscribe(() => {
+    console.log('game stopped');
     clearCanvas();
-    show(startBtn);
-    hide(clearCanvasBtn);
+    show(startButton);
+    hide(clearCanvasButton);
     hide(timeHeader);
     show(messageInputDiv);
     hide(currentWordHeader);
@@ -105,7 +103,7 @@ game.revealedWord$.subscribe((word: string) => {
 game.gameState$.subscribe((gameState) => {
     if (gameState.running) {
         console.log(gameState);
-        hide(startBtn);
+        hide(startButton);
         timeSpan.innerHTML = (30 - gameState.timePassed).toString();
         currentWordHeader.innerHTML = gameState.revealedWord.split('').map(letter => letter === '_' ? ' _ ' : letter).join('');
     }

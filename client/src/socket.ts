@@ -1,14 +1,20 @@
 import { of, fromEvent, Observable } from "rxjs";
-import { map, switchMap, tap } from "rxjs/operators";
+import { JQueryStyleEventEmitter } from "rxjs/internal/observable/fromEvent";
+import { map, switchMap } from "rxjs/operators";
 import { io, Socket } from "socket.io-client";
-import { ClientToServerEvents, ServerToClientEvents } from '../../shared/socket-events';
+import { ClientToServerEvents, ServerToClientEvents } from '@rx-pictionary/lib/socket';
 
-const socketIOServerURL: string = "ws://localhost:1338";
+const socketIOURL = process.env.SOCKETIO_URL!;
+const socketIOPort = process.env.SERVER_PORT!;
 
-export const socket$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>> = of(io(socketIOServerURL));
+export const socket$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>>
+    = of(io(`${socketIOURL}:${socketIOPort}`));
 
 export const connection$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>> = socket$.pipe(
-    switchMap((socket) => fromEvent(socket as any, "connect").pipe(map(() => socket)))
+    switchMap((socket) => fromEvent(
+        socket as JQueryStyleEventEmitter<Socket<ServerToClientEvents, ClientToServerEvents>, Error>,
+        "connect")
+        .pipe(map(() => socket)))
 );
 
 export function listenOnSocket

@@ -1,5 +1,4 @@
-import { Message } from "../../shared/models/message";
-import { Player } from "../../shared/models/player";
+import { Message, Player } from '@rx-pictionary/lib/models';
 
 const messageList = document.getElementById('message-list')!;
 const playersUl = document.getElementById('players')!;
@@ -29,9 +28,9 @@ export function renderPlayersList(players: Map<string, Player>) {
 }
 
 export function show(el: HTMLElement) {
-    el.style.visibility = 'visible';
+    el.style.display = 'block';
 }
 
 export function hide(el: HTMLElement) {
-    el.style.visibility = 'hidden';
+    el.style.display = 'none';
 }

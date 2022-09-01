@@ -1,14 +1,19 @@
-import { SocketParameterType } from '../../shared/socket-parameter';
-import { EVENTS } from './../../shared/socket-events';
+import {
+    ClientToServerEvents,
+    ServerToClientEvents,
+    InterServerEvents,
+    SocketData,
+    SocketParameterType,
+    EVENTS
+} from '@rx-pictionary/lib/socket';
 import express from "express";
 import cors from "cors";
 import * as http from "http";
 import fetch from "node-fetch";
-import { Message } from "../../shared/models/message";
+import { Message, Player } from '@rx-pictionary/lib/models';
 import { Server, Socket } from "socket.io"
-import { Player } from "../../shared/models/player";
-import { ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData } from "../../shared/socket-events";
 import { Game } from "./game";
+import HttpStatus from '../constants/http-status-code';
 
 export class AppServer {
     private app: express.Application;
@@ -20,7 +25,7 @@ export class AppServer {
 
     private drawingPlayerSocket: Socket<ClientToServerEvents, ServerToClientEvents>;
 
-    private game: Game = new Game();
+    private game: Game = new Game(this);
 
     constructor() {
         this.createApp();
@@ -45,8 +50,8 @@ export class AppServer {
     private config(): void {
         require("dotenv").config();
 
-        this.serverPort = process.env.PORT!;
-        this.api = process.env.API_URL!;
+        this.serverPort = process.env.SERVER_PORT!;
+        this.api = `${process.env.API_URL!}:${process.env.API_PORT}`;
     }
 
     private sockets(): void {
@@ -75,11 +80,14 @@ export class AppServer {
 
     public emitTime(seconds: number): void {
         this.io.sockets.emit(EVENTS.TIME, seconds);
+        if (seconds === 0) {
+            this.io.sockets.emit(EVENTS.STOP);
+        }
     }
 
     private events(): void {
         this.io.on(EVENTS.ERROR, (err: Error) => {
-            console.log(`connect_error due to ${err.message}`);
+            console.log(`connect_error due to ${err.message} `);
         });
 
         this.io.on(EVENTS.CONNECT, (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
@@ -90,7 +98,7 @@ export class AppServer {
             socket.on(EVENTS.NEW_PLAYER, async (name) => {
                 console.log(`Player ${socket.id}: ${name} connected`);
 
-                const res = await fetch(`${this.api}/players/${name}`);
+                const res = await fetch(`${this.api} /players/${name} `);
                 const fetchedPlayer = await res.json() as Player;
 
                 const playerToEmit: Player = {
@@ -101,8 +109,8 @@ export class AppServer {
 
                 console.log('fetched player:', fetchedPlayer);
 
-                if (res.status === 404) {
-                    await fetch(`${this.api}/players`, {
+                if (res.status === HttpStatus.NOT_FOUND) {
+                    await fetch(`${this.api} /players`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -139,7 +147,7 @@ export class AppServer {
                 const words: string[] = await res.json() as string[];
                 const word = words[Math.floor(Math.random() * words.length)];
 
-                this.game.start(this, word, socket.id);
+                this.game.start(word, socket.id);
 
                 socket.broadcast.emit(EVENTS.START, '_'.repeat(word.length));
 

@@ -1,6 +1,6 @@
 import { combineLatest, Observable, of } from 'rxjs';
 import { map, switchMap, tap, first, filter, share } from 'rxjs/operators';
-import { Player } from '../../shared/models/player';
+import { Player } from '@rx-pictionary/lib/models'
 import { send$ } from './button-actions';
 import { connection$ } from './socket';
 

@@ -19,6 +19,7 @@
   "homepage": "https://github.com/andrija-tosic/rx-pictionary#readme",
   "workspaces": [
     "./client",
-    "./server"
+    "./server",
+    "./lib"
   ]
 }
