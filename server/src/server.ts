@@ -18,7 +18,11 @@ import { API } from './api'
 export class AppServer {
     private app: express.Application;
     private server: http.Server;
-    private io: Server;
+    private io: Server<ClientToServerEvents,
+        ServerToClientEvents,
+        InterServerEvents,
+        SocketData<SocketParameterType>
+    >;
     private socket: Socket<ClientToServerEvents, ServerToClientEvents>;
     private serverPort: string | number;
 
@@ -84,10 +88,6 @@ export class AppServer {
     }
 
     private events(): void {
-        this.io.on(EVENTS.FROM_SERVER.ERROR, (err: Error) => {
-            console.log(`connect_error due to ${err.message} `);
-        });
-
         this.io.on(EVENTS.FROM_SERVER.CONNECT, (socket: Socket<ClientToServerEvents, ServerToClientEvents>) => {
             this.socket = socket;
 
