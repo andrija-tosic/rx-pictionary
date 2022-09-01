@@ -1,7 +1,7 @@
 import { map, switchMap, takeUntil, pairwise, filter, sampleTime } from 'rxjs/operators';
 import { tap } from 'rxjs/operators';
 import { BehaviorSubject, fromEvent, merge, Observable } from "rxjs";
-import { UI } from './render';
+import { UI } from './ui';
 
 export namespace Canvas {
     export const canvas: HTMLCanvasElement = document.getElementById('board')! as HTMLCanvasElement;

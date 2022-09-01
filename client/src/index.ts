@@ -2,7 +2,7 @@ import { Message, Player, RoundTime } from '@rx-pictionary/lib/models'
 import { SocketUtils } from "./socket";
 import { start$, startButton } from './button-actions';
 import { Canvas } from './canvas';
-import { UI } from './render';
+import { UI } from './ui';
 import { PlayerActions } from './player-actions';
 import { EVENTS } from '@rx-pictionary/lib/socket';
 import { Game } from './game';
