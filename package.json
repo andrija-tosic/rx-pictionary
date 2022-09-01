@@ -1,5 +1,5 @@
 {
-  "name": "paint-guess",
+  "name": "rx-pictionary",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -8,15 +8,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/andrija-tosic/paint-guess.git"
+    "url": "git+https://github.com/andrija-tosic/rx-pictionary.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/andrija-tosic/paint-guess/issues"
+    "url": "https://github.com/andrija-tosic/rx-pictionary/issues"
   },
-  "homepage": "https://github.com/andrija-tosic/paint-guess#readme",
+  "homepage": "https://github.com/andrija-tosic/rx-pictionary#readme",
   "workspaces": [
     "./client",
     "./server"

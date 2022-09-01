@@ -1,14 +1,15 @@
 import { Message } from "../../shared/models/message";
 import { Player } from "../../shared/models/player";
 
+const messageList = document.getElementById('message-list')!;
+const playersUl = document.getElementById('players')!;
+
 export function appendMessageToChat(message: Message) {
     const li = document.createElement('li');
     li.innerHTML = message.senderName + ": " + message.text;
 
-    document.getElementById('message-list')!.appendChild(li);
+    messageList.appendChild(li);
 }
-
-const playersUl = document.getElementById('players')!;
 
 export function renderPlayersList(players: Map<string, Player>) {
     playersUl.innerHTML = '';
@@ -25,4 +26,12 @@ export function renderPlayersList(players: Map<string, Player>) {
         playersUl.appendChild(li);
 
     });
+}
+
+export function show(el: HTMLElement) {
+    el.style.visibility = 'visible';
+}
+
+export function hide(el: HTMLElement) {
+    el.style.visibility = 'hidden';
 }

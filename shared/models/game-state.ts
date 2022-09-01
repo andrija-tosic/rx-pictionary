@@ -1,10 +1,6 @@
+import { Game } from './../../server/src/game';
 export type seconds = number;
 
-export interface GameState {
-    started: boolean;
-    revealedWord: string;
-    drawingPlayerId: string;
-    timePassed: seconds;
-}
+export type GameState = Pick<Game, 'running' | 'revealedWord' | 'drawingPlayerId' | 'timePassed'>
 
 export const RoundTime: seconds = 30;

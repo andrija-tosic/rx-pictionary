@@ -1,7 +1,7 @@
-import { game } from './game';
 import { map, switchMap, takeUntil, pairwise, filter, sampleTime } from 'rxjs/operators';
 import { tap } from 'rxjs/operators';
-import { fromEvent, merge } from "rxjs";
+import { BehaviorSubject, fromEvent, merge } from "rxjs";
+import { hide } from './render';
 
 export const canvas: HTMLCanvasElement = document.getElementById('board')! as HTMLCanvasElement;
 const drawMouseUp$ = fromEvent<MouseEvent>(canvas, 'mouseup');
@@ -24,7 +24,7 @@ fromEvent(colorPickerInput, 'change')
     .subscribe();
 
 export const clearCanvasBtn = document.getElementById('clear-canvas-btn')!;
-clearCanvasBtn.style.display = 'none';
+hide(clearCanvasBtn);
 
 export const canvasClear$ = fromEvent(clearCanvasBtn, 'click');
 
@@ -58,50 +58,51 @@ export function drawOnCanvas(
     }
 }
 
-console.log(game);
+export function getCanvasChangeStream(isDrawing$: BehaviorSubject<boolean>) {
+    const canvasDrawing$ = isDrawing$.pipe(
+        switchMap(isDrawing =>
+            drawMouseDown$
+                .pipe(
+                    filter(() => isDrawing),
+                    switchMap((e) => {
+                        return drawMouseMove$
+                            .pipe(
+                                takeUntil(drawMouseUp$),
+                                takeUntil(drawMouseLeave$),
+                                pairwise(),
+                            )
+                    }),
+                    map(([prevMouseEvent, currMouseEvent]) => {
+                        const rect = canvas.getBoundingClientRect();
 
-const canvasDrawing$ = game.isDrawing$.pipe(
-    switchMap(isDrawing =>
-        drawMouseDown$
-            .pipe(
-                filter(() => isDrawing),
-                switchMap((e) => {
-                    return drawMouseMove$
-                        .pipe(
-                            takeUntil(drawMouseUp$),
-                            takeUntil(drawMouseLeave$),
-                            pairwise(),
-                        )
-                }),
-                map(([prevMouseEvent, currMouseEvent]) => {
-                    const rect = canvas.getBoundingClientRect();
+                        const prevPos = {
+                            x: prevMouseEvent.clientX - rect.left,
+                            y: prevMouseEvent.clientY - rect.top
+                        };
 
-                    const prevPos = {
-                        x: prevMouseEvent.clientX - rect.left,
-                        y: prevMouseEvent.clientY - rect.top
-                    };
+                        const currentPos = {
+                            x: currMouseEvent.clientX - rect.left,
+                            y: currMouseEvent.clientY - rect.top
+                        };
 
-                    const currentPos = {
-                        x: currMouseEvent.clientX - rect.left,
-                        y: currMouseEvent.clientY - rect.top
-                    };
-
-                    return { prevPos, currentPos };
-                }),
-                tap(({ prevPos, currentPos }) => drawOnCanvas(prevPos, currentPos))
-            )
-    )
-);
-
-export const canvasChange$ = game.isDrawing$.pipe(
-    switchMap(isDrawing =>
-        merge(
-            canvasDrawing$,
-            canvasClear$
-        ).pipe(
-            sampleTime(100),
-            filter(() => isDrawing),
-            map(() => canvas.toDataURL("image/png"))
+                        return { prevPos, currentPos };
+                    }),
+                    tap(({ prevPos, currentPos }) => drawOnCanvas(prevPos, currentPos))
+                )
         )
-    )
-);
+    );
+
+    return isDrawing$.pipe(
+        switchMap(isDrawing =>
+            merge(
+                canvasDrawing$,
+                canvasClear$
+            ).pipe(
+                sampleTime(100),
+                filter(() => isDrawing),
+                map(() => canvas.toDataURL("image/png"))
+            )
+        )
+    );
+
+}

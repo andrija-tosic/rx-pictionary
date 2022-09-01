@@ -117,7 +117,7 @@ export class AppServer {
                 this.io.sockets.emit(EVENTS.NEW_PLAYER, playerToEmit);
 
                 socket.emit(EVENTS.GAME_STATE, {
-                    started: this.game.started,
+                    running: this.game.running,
                     drawingPlayerId: this.game.drawingPlayerId,
                     revealedWord: this.game.revealedWord,
                     timePassed: this.game.timePassed
@@ -141,7 +141,7 @@ export class AppServer {
 
                 this.game.start(this, word, socket.id);
 
-                this.io.sockets.emit(EVENTS.START, '_'.repeat(word.length));
+                socket.broadcast.emit(EVENTS.START, '_'.repeat(word.length));
 
                 socket.emit(EVENTS.WORD_REVEAL, word); // emitted only to player who's drawing
 
@@ -151,7 +151,7 @@ export class AppServer {
             socket.on(EVENTS.MESSAGE, async (message: Message) => {
                 console.log("[server](message): %s", JSON.stringify(message));
 
-                if (this.game.started
+                if (this.game.running
                     && socket.id !== this.drawingPlayerSocket.id
                     && message.text.trim().toLowerCase() === this.game.word
                 ) {
@@ -201,7 +201,7 @@ export class AppServer {
             socket.on(EVENTS.DISCONNECT, () => {
                 console.log(`Player ${socket.id}: ${this.game.players.get(socket.id)?.name} disconnected`);
                 this.game.players.delete(socket.id);
-                if (this.game.started && socket.id === this.game.drawingPlayerId) {
+                if (this.game.running && socket.id === this.game.drawingPlayerId) {
                     this.game.stop();
                     this.io.sockets.emit(EVENTS.STOP);
                 }

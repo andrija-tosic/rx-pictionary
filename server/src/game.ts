@@ -15,9 +15,8 @@ const enum TimeStamps {
     Late = 20
 }
 
-
 export class Game {
-    started: boolean = false;
+    running: boolean = false;
     word: string;
     revealedWord: string;
 
@@ -40,7 +39,7 @@ export class Game {
         return {
             drawingPlayerId: this.drawingPlayerId,
             revealedWord: this.revealedWord,
-            started: this.started,
+            running: this.running,
             timePassed: this.timePassed
         }
     }
@@ -63,7 +62,7 @@ export class Game {
         this.word = word;
         this.drawingPlayerId = drawingPlayerId;
 
-        this.started = true;
+        this.running = true;
         this.word = word;
         this.revealedWord = '_ '.repeat(word.length);
         this.timePassed = 0;
@@ -71,7 +70,6 @@ export class Game {
         this.timer = setInterval(() => {
             this.server.emitTime(RoundTime - this.timePassed);
 
-            this.timePassed++;
 
             switch (this.timePassed) {
                 case TimeStamps.Medium:
@@ -90,18 +88,17 @@ export class Game {
                 case RoundTime:
                     clearInterval(this.timer);
                     this.server.revealWord(this.word);
-                    this.started = false;
-                    break;
-
-                default:
+                    this.stop();
                     break;
             }
+
+            this.timePassed++;
 
         }, 1000);
     }
 
     stop() {
-        this.started = false;
+        this.running = false;
         clearInterval(this.timer);
     }
 }

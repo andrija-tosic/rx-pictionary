@@ -1,5 +1,5 @@
 {
-  "name": "@paint-guess/paint-guess-client",
+  "name": "@rx-pictionary/rx-pictionary-client",
   "version": "1.0.0",
   "description": "",
   "scripts": {
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/andrija-tosic/paint-guess.git"
+    "url": "git+https://github.com/andrija-tosic/rx-pictionary.git"
   },
   "author": "andrija-tosic",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/andrija-tosic/paint-guess/issues"
+    "url": "https://github.com/andrija-tosic/rx-pictionary/issues"
   },
-  "homepage": "https://github.com/andrija-tosic/paint-guess#readme",
+  "homepage": "https://github.com/andrija-tosic/rx-pictionary#readme",
   "devDependencies": {
     "@types/socket.io": "^3.0.2",
     "@types/socket.io-client": "^3.0.0",

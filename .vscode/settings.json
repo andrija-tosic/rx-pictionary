@@ -1,3 +1,4 @@
 {
-  "liveServer.settings.root": "/client"
+  "liveServer.settings.root": "/client",
+  "liveServer.settings.ignoreFiles": ["db.json*"]
 }

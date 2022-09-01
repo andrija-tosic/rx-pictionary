@@ -1,21 +1,13 @@
-import { filter, tap } from 'rxjs/operators';
+import { filter } from 'rxjs/operators';
 import { fromEvent, merge } from "rxjs";
 
 export const startBtn = document.getElementById('start-btn')!;
 const sendBtn = document.getElementById('send-btn')! as HTMLButtonElement;
 const messageInput = document.getElementById('message-input')! as HTMLInputElement;
 
-export const start$ = fromEvent(startBtn, 'click').pipe(
-    tap(() => {
-        startBtn.style.display = 'none';
-    }),
-);
+export const start$ = fromEvent(startBtn, 'click');
 
-const sendBtnPress$ = fromEvent(sendBtn, 'click').pipe(
-    tap(() => {
-        // console.log('send fromEvent tap');
-    })
-);
+const sendBtnPress$ = fromEvent(sendBtn, 'click');
 
 const enterKeyPress$ = fromEvent(messageInput, 'keypress')
     .pipe(

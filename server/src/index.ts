@@ -1,4 +1,3 @@
 import { AppServer } from './server';
 
-let app = new AppServer().getApp();
-export { app };
+const app = new AppServer().getApp();
