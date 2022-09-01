@@ -212,8 +212,8 @@ export class AppServer {
         const drawingPlayerToPUT: Omit<Player, 'id' | 'name'> = { score: drawingPlayer.score };
 
         await Promise.all([
-            API.fetchAPI('players', 'PUT', correctGuessPlayerToPUT),
-            API.fetchAPI('players', 'PUT', drawingPlayerToPUT)
+            API.fetchAPI(`players/${correctGuessPlayer.name}`, 'PUT', correctGuessPlayerToPUT),
+            API.fetchAPI(`players/${drawingPlayer.name}`, 'PUT', drawingPlayerToPUT)
         ]);
 
         this.io.sockets.emit(EVENTS.FROM_SERVER.CORRECT_GUESS, { id: socket.id, score: correctGuessPlayer.score });

@@ -7,9 +7,9 @@ export namespace Canvas {
     export const canvas: HTMLCanvasElement = document.getElementById('board')! as HTMLCanvasElement;
     export const canvasRenderingContext: CanvasRenderingContext2D = canvas.getContext('2d')!;
     export const clearCanvasButton = document.getElementById('clear-canvas-btn')!;
+    UI.hide(clearCanvasButton);
 
     const colorPickerInput = document.getElementById('color-picker')! as HTMLInputElement;
-    UI.hide(clearCanvasButton);
 
     export const canvasClear$ = fromEvent(clearCanvasButton, 'click');
 
