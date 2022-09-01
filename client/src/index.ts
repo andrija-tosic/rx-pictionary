@@ -1,27 +1,18 @@
 import { Message, Player, RoundTime } from '@rx-pictionary/lib/models'
-import { SocketUtils } from "./socket";
+import { SocketIO } from "./socket";
 import { start$, startButton } from './button-actions';
 import { Canvas } from './canvas';
-import { UI } from './ui';
+import { timeHeader, UI, messageInput, currentWordHeader, timeSpan, messageInputDiv } from './ui';
 import { PlayerActions } from './player-actions';
 import { EVENTS } from '@rx-pictionary/lib/socket';
 import { Game } from './game';
 
-const timeSpan = document.getElementById('time')!;
-const currentWordHeader = document.getElementById('current-word-header')!;
-const messageInputDiv = document.getElementById('message-input-div')!;
-const messageInput = document.getElementById('message-input')! as HTMLInputElement;
-const timeHeader = document.getElementById('time-header')!;
-UI.hide(timeHeader);
-
 const game = new Game();
 const canvasChange$ = Canvas.getCanvasChangeStream(game.canDraw$);
 
-function printPlayers() {
-    console.log(Array.from(game.players.values()));
-}
+UI.hide(timeHeader);
 
-SocketUtils.emitOnSocket(PlayerActions.playerSentMessage$).subscribe(({ socket, socketData: player }) => {
+SocketIO.emitOnSocket(PlayerActions.playerSentMessage$).subscribe(({ socket, socketData: player }) => {
 
     const message: Message = {
         senderId: player.id,
@@ -36,7 +27,7 @@ SocketUtils.emitOnSocket(PlayerActions.playerSentMessage$).subscribe(({ socket, 
     messageInput.value = '';
 });
 
-SocketUtils.listenOnSocket(EVENTS.FROM_CLIENT.MESSAGE).subscribe((message: Message) => {
+SocketIO.listenOnSocket(EVENTS.FROM_CLIENT.MESSAGE).subscribe((message: Message) => {
     UI.appendMessageToChat({
         senderId: message.senderId,
         senderName: message.senderName,
@@ -46,17 +37,8 @@ SocketUtils.listenOnSocket(EVENTS.FROM_CLIENT.MESSAGE).subscribe((message: Messa
     console.log(JSON.stringify(message));
 });
 
-function setupForGameStart() {
-    timeSpan.innerHTML = RoundTime.toString();
-
-    Canvas.clearCanvas();
-    UI.hide(startButton);
-    UI.show(timeHeader);
-    UI.show(currentWordHeader);
-}
-
 // emits when current player is drawing
-SocketUtils.emitOnSocket(start$).subscribe(({ socket }) => {
+SocketIO.emitOnSocket(start$).subscribe(({ socket }) => {
     game.canDraw$.next(true);
 
     setupForGameStart();
@@ -122,7 +104,7 @@ game.allPlayer$.subscribe(() => {
     printPlayers();
 });
 
-SocketUtils.emitOnSocket(PlayerActions.name$).subscribe(({ socket, socketData: name }) => {
+SocketIO.emitOnSocket(PlayerActions.name$).subscribe(({ socket, socketData: name }) => {
     socket.emit(EVENTS.FROM_CLIENT.NEW_PLAYER, name);
 });
 
@@ -152,20 +134,33 @@ game.playerLeft$.subscribe((playerThatLeft: Player) => {
     printPlayers();
 });
 
-SocketUtils.emitOnSocket(Canvas.canvasClear$).subscribe(({ socket }) => {
+SocketIO.emitOnSocket(Canvas.canvasClear$).subscribe(({ socket }) => {
     Canvas.clearCanvas();
     socket.emit(EVENTS.FROM_CLIENT.CLEAR_CANVAS);
 });
 
-SocketUtils.listenOnSocket(EVENTS.FROM_CLIENT.CLEAR_CANVAS).subscribe(() => {
+SocketIO.listenOnSocket(EVENTS.FROM_CLIENT.CLEAR_CANVAS).subscribe(() => {
     Canvas.clearCanvas();
 });
 
-SocketUtils.emitOnSocket(canvasChange$).subscribe(({ socket, socketData: base64ImageData }) => {
+SocketIO.emitOnSocket(canvasChange$).subscribe(({ socket, socketData: base64ImageData }) => {
     socket.emit(EVENTS.FROM_CLIENT.IMAGE, base64ImageData);
 });
 
-SocketUtils.listenOnSocket(EVENTS.FROM_CLIENT.IMAGE).subscribe((base64ImageData: string) => {
+SocketIO.listenOnSocket(EVENTS.FROM_CLIENT.IMAGE).subscribe((base64ImageData: string) => {
     console.log('received canvas change');
     Canvas.loadImageToCanvas(base64ImageData);
 });
+
+function setupForGameStart() {
+    timeSpan.innerHTML = RoundTime.toString();
+
+    Canvas.clearCanvas();
+    UI.hide(startButton);
+    UI.show(timeHeader);
+    UI.show(currentWordHeader);
+}
+
+function printPlayers() {
+    console.log(Array.from(game.players.values()));
+}

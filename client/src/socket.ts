@@ -7,14 +7,14 @@ import { ClientToServerEvents, ServerToClientEvents } from '@rx-pictionary/lib/s
 const socketIOURL = process.env.SOCKETIO_URL!;
 const socketIOPort = process.env.SERVER_PORT!;
 
-export namespace SocketUtils {
-    export const socket$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>>
+export namespace SocketIO {
+    const socket$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>>
         = of(io(`${socketIOURL}:${socketIOPort}`));
 
     export const connection$: Observable<Socket<ServerToClientEvents, ClientToServerEvents>> = socket$.pipe(
         switchMap((socket) => fromEvent(
             socket as JQueryStyleEventEmitter<Socket<ServerToClientEvents, ClientToServerEvents>, Error>,
-            "connect")
+            'connect')
             .pipe(map(() => socket)))
     );
 

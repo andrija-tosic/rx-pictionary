@@ -1,8 +1,15 @@
 import { Message, Player } from '@rx-pictionary/lib/models';
 
+export const timeSpan = document.getElementById('time')!;
+export const currentWordHeader = document.getElementById('current-word-header')!;
+export const messageInputDiv = document.getElementById('message-input-div')!;
+export const messageInput = document.getElementById('message-input')! as HTMLInputElement;
+export const timeHeader = document.getElementById('time-header')!;
+
 export namespace UI {
     const messageList = document.getElementById('message-list')!;
     const playersUl = document.getElementById('players')!;
+
 
     export function appendMessageToChat(message: Message) {
         const li = document.createElement('li');

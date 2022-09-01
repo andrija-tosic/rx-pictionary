@@ -2,7 +2,7 @@ import { combineLatest, Observable, of } from 'rxjs';
 import { map, switchMap, first, filter, share } from 'rxjs/operators';
 import { Player } from '@rx-pictionary/lib/models'
 import { send$ } from './button-actions';
-import { SocketUtils } from './socket';
+import { SocketIO } from './socket';
 
 export namespace PlayerActions {
     const name = localStorage.getItem('name');
@@ -24,7 +24,7 @@ export namespace PlayerActions {
         localStorage.setItem('name', name);
     });
 
-    const thisPlayer$: Observable<Player> = combineLatest([SocketUtils.connection$, name$])
+    const thisPlayer$: Observable<Player> = combineLatest([SocketIO.connection$, name$])
         .pipe(
             map(([socket, name]) => ({ id: socket?.id, name, score: 0 }))
         );
