@@ -3,6 +3,11 @@ import { tap } from 'rxjs/operators';
 import { BehaviorSubject, fromEvent, merge, Observable } from "rxjs";
 import { UI } from './ui';
 
+type Point2D = {
+    x: number,
+    y: number
+}
+
 export namespace Canvas {
     export const canvas: HTMLCanvasElement = document.getElementById('board')! as HTMLCanvasElement;
     export const canvasRenderingContext: CanvasRenderingContext2D = canvas.getContext('2d')!;
@@ -19,11 +24,6 @@ export namespace Canvas {
     const drawMouseLeave$ = fromEvent<MouseEvent>(canvas, 'mouseleave');
 
     const LINE_WIDTH = 3;
-
-    type Point2D = {
-        x: number,
-        y: number
-    }
 
     canvasRenderingContext.lineWidth = LINE_WIDTH;
     canvasRenderingContext.lineCap = 'round';
